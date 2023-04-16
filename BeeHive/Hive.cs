@@ -6,8 +6,8 @@ namespace BeeHive
     {
         private readonly ConcurrentDictionary<HiveComputationId, HiveThreadPool> _threadPoolById = new();
 
-        public HiveComputation<TRequest, TResponse> AddComputation<TRequest, TResponse>(
-            Func<TRequest, TResponse> compute,
+        public HiveComputation<TRequest, TResult> AddComputation<TRequest, TResult>(
+            Func<TRequest, TResult> compute,
             int maxParallelCount)
         {
             var id = HiveComputationId.Create();
@@ -16,7 +16,7 @@ namespace BeeHive
 
             _threadPoolById.TryAdd(id, pool);
 
-            return new HiveComputation<TRequest, TResponse>(id, compute, QueueComputation);
+            return new HiveComputation<TRequest, TResult>(id, compute, QueueComputation);
         }
 
         private void QueueComputation(HiveComputationId id, Action compute)
