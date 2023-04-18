@@ -8,10 +8,10 @@
         private readonly ISchedulingStrategy _scheduleStrategy;
         private readonly int _maxParallelCount;
 
-        public HiveThreadPool(ISchedulingStrategy scheduleStrategy, int maxParallelCount)
+        public HiveThreadPool(ComputationConfiguration configuration)
         {
-            _scheduleStrategy = scheduleStrategy;
-            _maxParallelCount = maxParallelCount;
+            _scheduleStrategy = configuration.SchedulingStrategy;
+            _maxParallelCount = configuration.MaxParallelExecution;
         }
 
         public void Load(Action computation)

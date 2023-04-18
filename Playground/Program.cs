@@ -2,8 +2,9 @@
 
 var hive = new Hive();
 
-var maxParallelCount = 3;
-var squareTask = hive.AddComputation<int, int>(Square, maxParallelCount);
+var squareTask = hive.AddComputation<int, int>(
+    Square,
+    config => config.MaxParallelExecution(3).WithMinLoadScheduling());
 
 squareTask.QueueRequest(10);
 squareTask.QueueRequest(11);

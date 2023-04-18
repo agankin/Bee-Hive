@@ -8,11 +8,13 @@ namespace BeeHive
 
         public HiveComputation<TRequest, TResult> AddComputation<TRequest, TResult>(
             Func<TRequest, TResult> compute,
-            int maxParallelCount)
+            Func<ComputationConfiguration, ComputationConfiguration> configure)
         {
+            var defaultConfig = ComputationConfiguration.Default;
+            var config = configure?.Invoke(defaultConfig) ?? defaultConfig;
+
             var id = HiveComputationId.Create();
-            var schedulingStrategy = new MinLoadSchedulingStrategy();
-            var pool = new HiveThreadPool(schedulingStrategy, maxParallelCount);
+            var pool = new HiveThreadPool(config);
 
             _threadPoolById.TryAdd(id, pool);
 
