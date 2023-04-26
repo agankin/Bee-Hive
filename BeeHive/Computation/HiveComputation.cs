@@ -26,7 +26,7 @@ namespace BeeHive
             
             _queueComputation(_id, computation);
 
-            return await completion.Task;
+            return await completion.Task.ConfigureAwait(false);
         }
 
         public void QueueRequest(TRequest request)

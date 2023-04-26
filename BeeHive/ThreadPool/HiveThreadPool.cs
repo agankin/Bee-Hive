@@ -3,15 +3,17 @@
     internal class HiveThreadPool
     {
         private readonly object _schedulingLock = new object();
-        private readonly List<HiveThread> _threads = new();
+        private readonly ConcurrentSet<HiveThread> _threads = new();
 
-        private readonly ISchedulingStrategy _scheduleStrategy;
+        private readonly int _minLiveThreads;
         private readonly int _maxParallelCount;
+        private readonly ISchedulingStrategy _scheduleStrategy;
 
         public HiveThreadPool(ComputationConfiguration configuration)
         {
-            _scheduleStrategy = configuration.SchedulingStrategy;
+            _minLiveThreads = configuration.MinLiveThreads;
             _maxParallelCount = configuration.MaxParallelExecution;
+            _scheduleStrategy = configuration.SchedulingStrategy;
         }
 
         public void Load(Action computation)
@@ -22,8 +24,6 @@
 
         private void Schedule(Action computation)
         {
-            RemoveFinished();
-
             if (_threads.Count < _maxParallelCount)
                 ScheduleNew(computation);
             else
@@ -32,7 +32,7 @@
 
         private void ScheduleNew(Action computation)
         {
-            var newThread = new HiveThread(_schedulingLock);
+            var newThread = new HiveThread(_schedulingLock, OnThreadFinishing);
 
             newThread.Load(computation);
             newThread.Run();
@@ -40,8 +40,22 @@
             _threads.Add(newThread);
         }
 
-        private void ScheduleExisting(Action computation) => _scheduleStrategy.Schedule(_threads, computation);
+        private void ScheduleExisting(Action computation) =>
+            _scheduleStrategy.Schedule(_threads.ToList(), computation);
 
-        private void RemoveFinished() =>  _threads.RemoveAll(thread => !thread.IsRunning);
+        private bool OnThreadFinishing(HiveThread finishedThread)
+        {
+            lock (_schedulingLock)
+            {
+                var canFinish = CanThreadFinish();
+
+                if (canFinish)
+                    _threads.Remove(finishedThread);
+
+                return canFinish;
+            }
+        }
+
+        private bool CanThreadFinish() => _threads.Count > _minLiveThreads;
     }
 }
