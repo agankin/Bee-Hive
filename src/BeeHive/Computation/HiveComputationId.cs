@@ -1,7 +1,6 @@
-﻿namespace BeeHive
+﻿namespace BeeHive;
+
+internal record HiveComputationId(Guid Id)
 {
-    internal record HiveComputationId(Guid Id)
-    {
-        public static HiveComputationId Create() => new HiveComputationId(Guid.NewGuid());
-    }
+    public static HiveComputationId Create() => new HiveComputationId(Guid.NewGuid());
 }

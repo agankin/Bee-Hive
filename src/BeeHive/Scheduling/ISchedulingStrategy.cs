@@ -1,7 +1,6 @@
-﻿namespace BeeHive
+﻿namespace BeeHive;
+
+internal interface ISchedulingStrategy
 {
-    internal interface ISchedulingStrategy
-    {
-        void Schedule(IReadOnlyList<HiveThread> threads, Action computation);
-    }
+    void Schedule(IReadOnlyList<HiveThread> threads, Action computation);
 }

@@ -1,4 +1,3 @@
-﻿namespace BeeHive
-{
-    internal struct Unit { }
-}
+﻿namespace BeeHive;
+
+internal struct Unit { }

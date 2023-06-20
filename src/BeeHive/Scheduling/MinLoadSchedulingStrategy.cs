@@ -1,10 +1,9 @@
-﻿namespace BeeHive
+﻿namespace BeeHive;
+
+internal class MinLoadSchedulingStrategy : ISchedulingStrategy
 {
-    internal class MinLoadSchedulingStrategy : ISchedulingStrategy
+    public void Schedule(IReadOnlyList<HiveThread> threads, Action computation)
     {
-        public void Schedule(IReadOnlyList<HiveThread> threads, Action computation)
-        {
-            threads.OrderBy(thread => thread.QueuedCount).First().Load(computation);
-        }
+        threads.OrderBy(thread => thread.QueuedCount).First().Load(computation);
     }
 }

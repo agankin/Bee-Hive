@@ -1,9 +1,8 @@
 ﻿using System.Collections.Concurrent;
 
-namespace BeeHive
+namespace BeeHive;
+
+internal class HiveThreadComputationsQueue : BlockingCollection<Action>
 {
-    internal class HiveThreadComputationsQueue : BlockingCollection<Action>
-    {
-        public HiveThreadComputationsQueue() : base(new ConcurrentQueue<Action>()) { }
-    }
+    public HiveThreadComputationsQueue() : base(new ConcurrentQueue<Action>()) { }
 }
