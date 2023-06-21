@@ -2,14 +2,25 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Run Benchmarks",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-release",
+            "program": "${workspaceFolder}/tests/BeeHive.Benchmarks/bin/Release/net7.0/BeeHive.Benchmarks.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "externalTerminal",
+            "stopAtEntry": false
+        },
+        {
             "name": "Run Playground",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build",
+            "preLaunchTask": "build-debug",
             "program": "${workspaceFolder}/samples/Playground/bin/Debug/net7.0/Playground.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "console": "internalConsole",
+            "console": "externalTerminal",
             "stopAtEntry": false
         }
     ]

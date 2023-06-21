@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeeHive", "src\BeeHive\BeeH
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground", "samples\Playground\Playground.csproj", "{D901EEF4-07A0-4E32-AF2B-F3C6BF43FFF5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{B134529E-B401-4BA3-9F3B-A3C82CAFF5DF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeeHive.Benchmarks", "tests\BeeHive.Benchmarks\BeeHive.Benchmarks.csproj", "{3E782EC7-4E3A-4892-834F-ECE48BF5D87F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +28,12 @@ Global
 		{D901EEF4-07A0-4E32-AF2B-F3C6BF43FFF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D901EEF4-07A0-4E32-AF2B-F3C6BF43FFF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D901EEF4-07A0-4E32-AF2B-F3C6BF43FFF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E782EC7-4E3A-4892-834F-ECE48BF5D87F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E782EC7-4E3A-4892-834F-ECE48BF5D87F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E782EC7-4E3A-4892-834F-ECE48BF5D87F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E782EC7-4E3A-4892-834F-ECE48BF5D87F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3E782EC7-4E3A-4892-834F-ECE48BF5D87F} = {B134529E-B401-4BA3-9F3B-A3C82CAFF5DF}
 	EndGlobalSection
 EndGlobal
