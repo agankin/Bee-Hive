@@ -1,23 +1,19 @@
 ﻿namespace BeeHive;
 
 internal class HiveThread
-{
-    private readonly HiveThreadComputationsQueue _computationsQueue = new();
-    
-    private readonly object _schedulingLock;
+{    
+    private readonly ComputationQueue _computationQueue;
+    private readonly CancellationToken _cancellationToken;
     private readonly Func<HiveThread, bool> _onThreadFinishing;
 
     private bool _isRunning;
 
-    public HiveThread(object schedulingLock, Func<HiveThread, bool> onThreadFinishing)
+    public HiveThread(ComputationQueue computationQueue, CancellationToken cancellationToken, Func<HiveThread, bool> onThreadFinishing)
     {
-        _schedulingLock = schedulingLock;
+        _computationQueue = computationQueue;
+        _cancellationToken = cancellationToken;
         _onThreadFinishing = onThreadFinishing;
     }
-
-    public int QueuedCount => _computationsQueue.Count;
-
-    public void Load(Action computation) => _computationsQueue.Add(computation);
 
     public void Run()
     {
@@ -30,40 +26,7 @@ internal class HiveThread
 
     private void QueueHandler()
     {
-        DebugLogger.Log("Thread started");
-        while (TryGetNext(out var computation))
-        {
-            computation?.Invoke();
-        }
+        while (_computationQueue.TryDequeue(out var computation, _cancellationToken))
+            computation();
     }
-
-    private bool TryGetNext(out Action? computation)
-    {
-        TryGetNextComputation tryGetNext = null!;
-        lock (_schedulingLock)
-        {
-            if (_computationsQueue.TryTake(out computation))
-                return true;
-
-            tryGetNext = _onThreadFinishing(this) ? FinishQueueHandling : WaitForNewComputation;
-        }
-
-        return tryGetNext(out computation);
-    }
-
-    private bool WaitForNewComputation(out Action? computation)
-    {
-        computation = _computationsQueue.Take();
-        return true;
-    }
-
-    private bool FinishQueueHandling(out Action? computation)
-    {
-        DebugLogger.Log("Thread finished");
-
-        computation = null;
-        return _isRunning = false;
-    }
-
-    private delegate bool TryGetNextComputation(out Action? computation);
 }

@@ -4,7 +4,7 @@ namespace BeeHive.Benchmarks;
 
 public class Benchmarks
 {
-    private const int ComputeRunCount = 1000;
+    private const int ComputeRunCount = 100;
     private const int ComputeSumOfNumbers = 1000000;
     private const int DegreeOfParallelism = 4;
 
@@ -19,8 +19,13 @@ public class Benchmarks
             Compute,
             config => config
                 .MinLiveThreads(DegreeOfParallelism)
-                .MaxParallelExecution(DegreeOfParallelism)
-                .WithMinLoadScheduling());
+                .MaxLiveThreads(DegreeOfParallelism));
+    }
+
+    [GlobalCleanup]
+    public void Cleanup()
+    {
+        _hive.Dispose();
     }
 
     [Benchmark]

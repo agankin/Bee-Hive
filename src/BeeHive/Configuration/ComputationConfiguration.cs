@@ -7,13 +7,10 @@ public record ComputationConfiguration
     public static readonly ComputationConfiguration Default = new ComputationConfiguration
     {
         MinLiveThreads = 1,
-        MaxParallelExecution = 1,
-        SchedulingStrategy = new MinLoadSchedulingStrategy(),
+        MaxLiveThreads = 1
     };
 
     internal int MinLiveThreads { get; init; }
 
-    internal int MaxParallelExecution { get; init; }
-
-    internal ISchedulingStrategy SchedulingStrategy { get; init; } = null!;
+    internal int MaxLiveThreads { get; init; }
 }
