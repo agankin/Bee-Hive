@@ -55,7 +55,7 @@ public class Benchmarks
 
         for (var runIdx = 0; runIdx < ComputeRunCount; runIdx++)
         {
-            _hiveComputation.QueueRequest(Unit.Value);
+            _hiveComputation.Compute(Unit.Value);
         }
 
         var resultCount = 0;

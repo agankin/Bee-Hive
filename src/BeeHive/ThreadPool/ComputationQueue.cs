@@ -14,11 +14,11 @@ internal class ComputationQueue
         _semaphore.Release();
     }
 
-    public bool TryDequeue([MaybeNullWhen(false)]out Action next, CancellationToken cancellationToken)
+    public bool TryDequeue(Func<bool> canSkipWaitingForNext, CancellationToken cancellationToken, [MaybeNullWhen(false)]out Action next)
     {
         while (!_queue.TryDequeue(out next))
         {
-            if (!WaitForNext(cancellationToken))
+            if (canSkipWaitingForNext() || !WaitForNext(cancellationToken))
                 return false;
         }
 

@@ -4,15 +4,15 @@ internal class HiveThread
 {    
     private readonly ComputationQueue _computationQueue;
     private readonly CancellationToken _cancellationToken;
-    private readonly Func<HiveThread, bool> _onThreadFinishing;
+    private readonly Func<HiveThread, bool> _requestFinishing;
 
     private bool _isRunning;
 
-    public HiveThread(ComputationQueue computationQueue, CancellationToken cancellationToken, Func<HiveThread, bool> onThreadFinishing)
+    public HiveThread(ComputationQueue computationQueue, Func<HiveThread, bool> requestFinishing, CancellationToken cancellationToken)
     {
         _computationQueue = computationQueue;
         _cancellationToken = cancellationToken;
-        _onThreadFinishing = onThreadFinishing;
+        _requestFinishing = requestFinishing;
     }
 
     public void Run()
@@ -26,7 +26,7 @@ internal class HiveThread
 
     private void QueueHandler()
     {
-        while (_computationQueue.TryDequeue(out var computation, _cancellationToken))
+        while (_computationQueue.TryDequeue(() => _requestFinishing(this), _cancellationToken, out var computation))
             computation();
     }
 }

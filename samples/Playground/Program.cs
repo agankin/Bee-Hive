@@ -2,19 +2,23 @@
 
 var hive = new Hive();
 
-var squareTask = hive.AddComputation<int, int>(
+var computeSquares = hive.AddComputation<int, int>(
     Square,
     config => config
         .MinLiveThreads(3)
         .MaxLiveThreads(5));
 
-for (var i = 0; i < 10; i++)
-    squareTask.QueueRequest(i);
+var computations = QueueComputations(computeSquares);
+await Task.WhenAll(computations);
 
-var results = squareTask.GetNewResultCollection();
+Console.Write("Computations finished! To exit press any key...");
+Console.ReadKey(true);
 
-foreach (var result in results.GetConsumingEnumerable())
-    Log($"Result: {result}");
+IEnumerable<Task> QueueComputations(HiveComputation<int, int> computeSquares)
+{
+    for (var i = 0; i < 30; i++)
+        yield return computeSquares.Compute(i).ContinueWith(task => Log($"Result: {task.Result}"));
+}
 
 int Square(int number)
 {

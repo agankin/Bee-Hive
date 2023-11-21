@@ -4,35 +4,24 @@ namespace BeeHive;
 
 public class HiveComputation<TRequest, TResult>
 {
-    private readonly HiveComputationId _id;
     private readonly Func<TRequest, TResult> _compute;
-    private readonly Action<HiveComputationId, Action> _queueComputation;
+    private readonly HiveThreadPool _threadPool;
     private readonly ConcurrentSet<HiveResultCollection<TResult>> _resultCollections = new();
 
-    internal HiveComputation(
-        HiveComputationId id,
-        Func<TRequest, TResult> compute,
-        Action<HiveComputationId, Action> queueComputation)
+    internal HiveComputation(Func<TRequest, TResult> compute, HiveThreadPool threadPool)
     {
-        _id = id;
-        _queueComputation = queueComputation;
         _compute = compute;
+        _threadPool = threadPool;
     }
 
-    public async Task<TResult> RequestAsync(TRequest request)
+    public Task<TResult> Compute(TRequest request)
     {
-        var completion = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var computation = CreateComputationForAsyncRequest(request, completion);
+        var completionSource = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var computation = CreateComputation(request, completionSource);
         
-        _queueComputation(_id, computation);
+        _threadPool.Queue(computation);
 
-        return await completion.Task.ConfigureAwait(false);
-    }
-
-    public void QueueRequest(TRequest request)
-    {
-        var computation = CreateComputationForQueueRequest(request);
-        _queueComputation(_id, computation);
+        return completionSource.Task;
     }
 
     public BlockingCollection<TResult> GetNewResultCollection()
@@ -43,23 +32,14 @@ public class HiveComputation<TRequest, TResult>
         return collection;
     }
 
-    private Action CreateComputationForAsyncRequest(TRequest request, TaskCompletionSource<TResult> taskCompletion)
+    private Action CreateComputation(TRequest request, TaskCompletionSource<TResult> completionSource)
     {
         return () =>
         {
             var result = _compute(request);
             AddResult(result);
 
-            taskCompletion.SetResult(result);
-        };
-    }
-
-    private Action CreateComputationForQueueRequest(TRequest request)
-    {
-        return () =>
-        {
-            var result = _compute(request);
-            AddResult(result);
+            completionSource.SetResult(result);
         };
     }
 

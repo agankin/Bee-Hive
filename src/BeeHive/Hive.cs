@@ -1,37 +1,26 @@
-﻿using System.Collections.Concurrent;
-
-namespace BeeHive;
+﻿namespace BeeHive;
 
 public class Hive : IDisposable
 {
-    private readonly ConcurrentDictionary<HiveComputationId, HiveThreadPool> _threadPoolById = new();
+    private readonly IList<HiveThreadPool> _threadPools = new List<HiveThreadPool>();
 
     public HiveComputation<TRequest, TResult> AddComputation<TRequest, TResult>(
         Func<TRequest, TResult> compute,
-        Func<ComputationConfiguration, ComputationConfiguration> configure)
+        Func<ComputationConfiguration, ComputationConfiguration>? configure = null)
     {
         var defaultConfig = ComputationConfiguration.Default;
         var config = configure?.Invoke(defaultConfig) ?? defaultConfig;
 
-        var id = HiveComputationId.Create();
         var pool = new HiveThreadPool(config).Start();
+        
+        _threadPools.Add(pool);
 
-        _threadPoolById.TryAdd(id, pool);
-
-        return new HiveComputation<TRequest, TResult>(id, compute, QueueComputation);
+        return new HiveComputation<TRequest, TResult>(compute, pool);
     }
 
     public void Dispose()
     {
-        _threadPoolById.Values.ForEach(pool => pool.Stop());
-        _threadPoolById.Clear();
-    }
-
-    private void QueueComputation(HiveComputationId id, Action compute)
-    {
-        if (!_threadPoolById.TryGetValue(id, out var pool))
-            throw new InvalidOperationException("Hive Thread Pool not found.");
-
-        pool.Load(compute);
+        _threadPools.ForEach(pool => pool.Stop());
+        _threadPools.Clear();
     }
 }
