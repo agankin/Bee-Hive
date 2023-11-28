@@ -2,14 +2,17 @@
 
 internal class HiveThreadPool
 {
+    private readonly object _threadsSyncObject = new();
     private readonly ConcurrentSet<HiveThread> _threads = new();
     private readonly ComputationQueue _computationQueue = new();
 
     private readonly int _minLiveThreads;
     private readonly int _maxLiveThreads;
 
-    private readonly CancellationTokenSource _poolRunningCancellationTokenSource = new();
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    
     private PoolState _state = PoolState.Created;
+    private volatile int _threadsCount;
 
     public HiveThreadPool(ComputationConfiguration configuration)
     {
@@ -24,44 +27,77 @@ internal class HiveThreadPool
 
         _state = PoolState.Running;
 
-        var cancellationToken = _poolRunningCancellationTokenSource.Token;
         for (var threadIdx = 0; threadIdx < _minLiveThreads; threadIdx++)
-            StartThread(cancellationToken);
+        {
+            StartThread(_cancellationTokenSource.Token);
+            _threadsCount++;
+        }
 
         return this;
     }
 
-    public HiveThreadPool Stop()
+    public void Stop()
     {
+        if (_state == PoolState.Stopped)
+            return;
+
         if (_state != PoolState.Created)
             throw new InvalidOperationException($"{nameof(HiveThreadPool)} is not in {nameof(PoolState.Running)} state.");
 
-        _poolRunningCancellationTokenSource.Cancel();
-
-        return this;
+        _cancellationTokenSource.Cancel();
     }
 
-    public void Queue(Action computation) => _computationQueue.Enqueue(computation);
+    public void Queue(Action computation)
+    {
+        if (RequestStartingThread())
+            StartThread(_cancellationTokenSource.Token);
+
+        _computationQueue.Enqueue(computation);
+    }
 
     private void StartThread(CancellationToken cancellationToken)
     {
-        var newThread = new HiveThread(_computationQueue, RequestFinishing, cancellationToken);
+        var newThread = new HiveThread(_computationQueue, RequestFinishingThread, cancellationToken);
         newThread.Run();
 
         _threads.Add(newThread);
     }
 
-    private bool RequestFinishing(HiveThread thread)
+    private bool RequestFinishingThread(HiveThread thread)
     {
-        var canFinish = CanThreadFinish();
-
+        var canFinish = RequestFinishingThread();
         if (canFinish)
             _threads.Remove(thread);
 
         return canFinish;
     }
 
-    private bool CanThreadFinish() => _threads.Count > _minLiveThreads;
+    private bool RequestStartingThread()
+    {
+        lock (_threadsSyncObject)
+        {
+            if (_threadsCount >= _maxLiveThreads)
+                return false;
+
+            var shouldStart = _computationQueue.Count > 0;
+            if (shouldStart)
+                _threadsCount++;
+
+            return shouldStart;
+        }
+    }
+
+    private bool RequestFinishingThread()
+    {
+        lock (_threadsSyncObject)
+        {
+            var canFinish = _threadsCount > _minLiveThreads;
+            if (canFinish)
+                _threadsCount--;
+            
+            return canFinish;
+        }
+    }
 
     private enum PoolState
     {
