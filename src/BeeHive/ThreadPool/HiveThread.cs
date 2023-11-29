@@ -2,13 +2,13 @@
 
 internal class HiveThread
 {    
-    private readonly ComputationQueue _computationQueue;
+    private readonly BlockingQueue<Action> _computationQueue;
     private readonly CancellationToken _cancellationToken;
     private readonly Func<HiveThread, bool> _requestFinishing;
 
     private bool _isRunning;
 
-    public HiveThread(ComputationQueue computationQueue, Func<HiveThread, bool> requestFinishing, CancellationToken cancellationToken)
+    public HiveThread(BlockingQueue<Action> computationQueue, Func<HiveThread, bool> requestFinishing, CancellationToken cancellationToken)
     {
         _computationQueue = computationQueue;
         _cancellationToken = cancellationToken;
@@ -26,7 +26,32 @@ internal class HiveThread
 
     private void QueueHandler()
     {
-        while (_computationQueue.TryDequeue(() => _requestFinishing(this), _cancellationToken, out var computation))
-            computation();
+        Log("Thread started!");
+
+        var dequeueNext = true;
+        while (dequeueNext)
+        {
+            var (hasValue, computation) = _computationQueue.DequeueOrWait(() => _requestFinishing(this), _cancellationToken);
+            
+            if (hasValue)
+                computation?.Invoke();
+
+            dequeueNext = hasValue;
+        }
+
+        Log("Thread finished!");
+    }
+
+    private static object _logSync = new();
+
+    private static void Log(string msg)
+    {
+        lock (_logSync)
+        {
+            var color = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine(DateTime.UtcNow.ToString("G") + ": " + msg);
+            Console.ForegroundColor = color;
+        }
     }
 }

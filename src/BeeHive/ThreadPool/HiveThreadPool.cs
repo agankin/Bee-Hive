@@ -4,7 +4,7 @@ internal class HiveThreadPool
 {
     private readonly object _threadsSyncObject = new();
     private readonly ConcurrentSet<HiveThread> _threads = new();
-    private readonly ComputationQueue _computationQueue = new();
+    private readonly BlockingQueue<Action> _computationQueue;
 
     private readonly int _minLiveThreads;
     private readonly int _maxLiveThreads;
@@ -18,6 +18,8 @@ internal class HiveThreadPool
     {
         _minLiveThreads = configuration.MinLiveThreads;
         _maxLiveThreads = configuration.MaxLiveThreads;
+
+        _computationQueue = new(configuration.ThreadWaitForNextMilliseconds);
     }
 
     public HiveThreadPool Start()

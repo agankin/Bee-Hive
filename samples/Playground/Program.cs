@@ -6,12 +6,12 @@ var computeSquares = hive.AddComputation<int, int>(
     Square,
     config => config
         .MinLiveThreads(3)
-        .MaxLiveThreads(5));
+        .MaxLiveThreads(5)
+        .ThreadWaitForNext(3000));
 
 var computations = QueueComputations(computeSquares);
 await Task.WhenAll(computations);
 
-Console.Write("Computations finished! To exit press any key...");
 Console.ReadKey(true);
 
 IEnumerable<Task> QueueComputations(HiveComputation<int, int> computeSquares)

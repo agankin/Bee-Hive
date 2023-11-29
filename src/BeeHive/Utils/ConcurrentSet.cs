@@ -5,13 +5,13 @@ namespace BeeHive;
 
 internal class ConcurrentSet<TItem> : IEnumerable<TItem> where TItem : notnull
 {
-    private readonly ConcurrentDictionary<TItem, Unit> _dict = new();
+    private readonly ConcurrentDictionary<TItem, Nothing> _dict = new();
 
     public int Count => _dict.Keys.Count;
 
     public bool Contains(TItem item) => _dict.ContainsKey(item);
 
-    public void Add(TItem item) => _dict.TryAdd(item, new Unit());
+    public void Add(TItem item) => _dict.TryAdd(item, new Nothing());
 
     public void Remove(TItem item) => _dict.TryRemove(item, out _);
 

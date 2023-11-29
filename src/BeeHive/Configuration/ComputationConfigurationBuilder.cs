@@ -7,4 +7,7 @@ public static class ComputationConfigurationBuilder
 
     public static ComputationConfiguration MaxLiveThreads(this ComputationConfiguration config, int maxLiveThreads) =>
         config with { MaxLiveThreads = maxLiveThreads };
+
+    public static ComputationConfiguration ThreadWaitForNext(this ComputationConfiguration config, int milliseconds) =>
+        config with { ThreadWaitForNextMilliseconds = milliseconds };
 }
