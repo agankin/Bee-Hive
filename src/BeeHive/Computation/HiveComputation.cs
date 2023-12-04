@@ -14,9 +14,9 @@ public class HiveComputation<TRequest, TResult>
         _threadPool = threadPool;
     }
 
-    public Task<TResult> Compute(TRequest request)
+    public Task<Result<TResult>> Compute(TRequest request)
     {
-        var completionSource = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var completionSource = new TaskCompletionSource<Result<TResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
         var computation = CreateComputation(request, completionSource);
         
         _threadPool.Queue(computation);
@@ -24,7 +24,7 @@ public class HiveComputation<TRequest, TResult>
         return completionSource.Task;
     }
 
-    public BlockingCollection<TResult> GetNewResultCollection()
+    public BlockingCollection<Result<TResult>> GetNewResultCollection()
     {
         var collection = new HiveResultCollection<TResult>(RemoveDisposedCollection);
         _resultCollections.Add(collection);
@@ -32,18 +32,31 @@ public class HiveComputation<TRequest, TResult>
         return collection;
     }
 
-    private Action CreateComputation(TRequest request, TaskCompletionSource<TResult> completionSource)
+    private Action CreateComputation(TRequest request, TaskCompletionSource<Result<TResult>> completionSource)
     {
+        void OnResult(Result<TResult> result)
+        {
+            AddResult(result);
+            completionSource.SetResult(result);
+        }
+
         return () =>
         {
-            var result = _compute(request);
-            AddResult(result);
-
-            completionSource.SetResult(result);
+            try
+            {
+                var value = _compute(request);
+                var result = Result<TResult>.Value(value);
+                OnResult(result);
+            }
+            catch (Exception ex)
+            {
+                var error = Result<TResult>.Error(ex);
+                OnResult(error);
+            }
         };
     }
 
-    private void AddResult(TResult result) =>
+    private void AddResult(Result<TResult> result) =>
         _resultCollections.ForEach(collection => collection.Add(result));
 
     private void RemoveDisposedCollection(HiveResultCollection<TResult> collection) =>

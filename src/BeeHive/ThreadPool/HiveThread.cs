@@ -26,8 +26,6 @@ internal class HiveThread
 
     private void QueueHandler()
     {
-        Log("Thread started!");
-
         var dequeueNext = true;
         while (dequeueNext)
         {
@@ -37,21 +35,6 @@ internal class HiveThread
                 computation?.Invoke();
 
             dequeueNext = hasValue;
-        }
-
-        Log("Thread finished!");
-    }
-
-    private static object _logSync = new();
-
-    private static void Log(string msg)
-    {
-        lock (_logSync)
-        {
-            var color = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine(DateTime.UtcNow.ToString("G") + ": " + msg);
-            Console.ForegroundColor = color;
         }
     }
 }

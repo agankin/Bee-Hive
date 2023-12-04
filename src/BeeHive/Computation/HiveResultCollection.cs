@@ -2,7 +2,7 @@
 
 namespace BeeHive;
 
-public class HiveResultCollection<TResult> : BlockingCollection<TResult>
+internal class HiveResultCollection<TResult> : BlockingCollection<Result<TResult>>
 {
     private readonly Action<HiveResultCollection<TResult>>? _onDisposed;
 
