@@ -4,7 +4,6 @@ internal class HiveThreadPool
 {
     private readonly object _threadsSyncObject = new();
     private readonly ConcurrentSet<HiveThread> _threads = new();
-    private readonly BlockingQueue<Action> _computationQueue;
 
     private readonly int _minLiveThreads;
     private readonly int _maxLiveThreads;
@@ -19,8 +18,10 @@ internal class HiveThreadPool
         _minLiveThreads = configuration.MinLiveThreads;
         _maxLiveThreads = configuration.MaxLiveThreads;
 
-        _computationQueue = new(configuration.ThreadWaitForNextMilliseconds);
+        ComputationQueue = new(configuration.ThreadWaitForNextMilliseconds);
     }
+
+    internal BlockingQueue<Action> ComputationQueue { get; }
 
     public HiveThreadPool Start()
     {
@@ -54,24 +55,24 @@ internal class HiveThreadPool
         if (RequestStartingThread())
             StartThread(_cancellationTokenSource.Token);
 
-        _computationQueue.Enqueue(computation);
+        ComputationQueue.Enqueue(computation);
     }
 
-    private void StartThread(CancellationToken cancellationToken)
-    {
-        var newThread = new HiveThread(_computationQueue, RequestFinishingThread, cancellationToken);
-        newThread.Run();
-
-        _threads.Add(newThread);
-    }
-
-    private bool RequestFinishingThread(HiveThread thread)
+    internal bool RequestFinishingThread(HiveThread thread)
     {
         var canFinish = RequestFinishingThread();
         if (canFinish)
             _threads.Remove(thread);
 
         return canFinish;
+    }
+
+    private void StartThread(CancellationToken cancellationToken)
+    {
+        var newThread = new HiveThread(this, cancellationToken);
+        newThread.Run();
+
+        _threads.Add(newThread);
     }
 
     private bool RequestStartingThread()
@@ -81,7 +82,7 @@ internal class HiveThreadPool
             if (_threadsCount >= _maxLiveThreads)
                 return false;
 
-            var shouldStart = _computationQueue.Count > 0;
+            var shouldStart = ComputationQueue.Count > 0;
             if (shouldStart)
                 _threadsCount++;
 

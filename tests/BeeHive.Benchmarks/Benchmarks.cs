@@ -51,7 +51,7 @@ public class Benchmarks
     [Benchmark]
     public void HiveComputation()
     {
-        var results = _hiveComputation.GetNewResultCollection().GetConsumingEnumerable();
+        var results = _hiveComputation.CreateResultsCollection().GetConsumingEnumerable();
 
         for (var runIdx = 0; runIdx < ComputeRunCount; runIdx++)
         {

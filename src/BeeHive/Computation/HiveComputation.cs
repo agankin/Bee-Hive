@@ -4,11 +4,11 @@ namespace BeeHive;
 
 public class HiveComputation<TRequest, TResult>
 {
-    private readonly Func<TRequest, TResult> _compute;
+    private readonly AsyncFunc<TRequest, TResult> _compute;
     private readonly HiveThreadPool _threadPool;
     private readonly ConcurrentSet<HiveResultCollection<TResult>> _resultCollections = new();
 
-    internal HiveComputation(Func<TRequest, TResult> compute, HiveThreadPool threadPool)
+    internal HiveComputation(AsyncFunc<TRequest, TResult> compute, HiveThreadPool threadPool)
     {
         _compute = compute;
         _threadPool = threadPool;
@@ -24,7 +24,7 @@ public class HiveComputation<TRequest, TResult>
         return completionSource.Task;
     }
 
-    public BlockingCollection<Result<TResult>> GetNewResultCollection()
+    public BlockingCollection<Result<TResult>> CreateResultsCollection()
     {
         var collection = new HiveResultCollection<TResult>(RemoveDisposedCollection);
         _resultCollections.Add(collection);
@@ -42,17 +42,21 @@ public class HiveComputation<TRequest, TResult>
 
         return () =>
         {
-            try
+            var awaiter = _compute(request).GetAwaiter();
+            awaiter.OnCompleted(() =>
             {
-                var value = _compute(request);
-                var result = Result<TResult>.Value(value);
-                OnResult(result);
-            }
-            catch (Exception ex)
-            {
-                var error = Result<TResult>.Error(ex);
-                OnResult(error);
-            }
+                try
+                {
+                    var resultValue = awaiter.GetResult();
+                    var result = Result<TResult>.Value(resultValue);
+                    OnResult(result);
+                }
+                catch (Exception ex)
+                {
+                    var error = Result<TResult>.Error(ex);
+                    OnResult(error);
+                }
+            });            
         };
     }
 
