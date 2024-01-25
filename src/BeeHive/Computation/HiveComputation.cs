@@ -4,22 +4,22 @@ namespace BeeHive;
 
 public class HiveComputation<TRequest, TResult>
 {
-    private readonly AsyncFunc<TRequest, TResult> _compute;
-    private readonly HiveThreadPool _threadPool;
+    private readonly Compute<TRequest, TResult> _compute;
+    private readonly HiveThreadPool _hiveThreadPool;
     private readonly ConcurrentSet<HiveResultCollection<TResult>> _resultCollections = new();
 
-    internal HiveComputation(AsyncFunc<TRequest, TResult> compute, HiveThreadPool threadPool)
+    internal HiveComputation(Compute<TRequest, TResult> compute, HiveThreadPool hiveThreadPool)
     {
         _compute = compute;
-        _threadPool = threadPool;
+        _hiveThreadPool = hiveThreadPool;
     }
 
-    public Task<Result<TResult>> Compute(TRequest request)
+    public Task<Result<TResult>> EnqueueTask(TRequest request)
     {
         var completionSource = new TaskCompletionSource<Result<TResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
         var computation = CreateComputation(request, completionSource);
         
-        _threadPool.Queue(computation);
+        _hiveThreadPool.Queue(computation);
 
         return completionSource.Task;
     }
@@ -42,7 +42,7 @@ public class HiveComputation<TRequest, TResult>
 
         return () =>
         {
-            var awaiter = _compute(request).GetAwaiter();
+            var awaiter = _compute(request, CancellationToken.None).GetAwaiter();
             awaiter.OnCompleted(() =>
             {
                 try
