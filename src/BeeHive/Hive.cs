@@ -1,49 +1,78 @@
-﻿namespace BeeHive;
+﻿using System.Collections.Concurrent;
 
-public class Hive : IDisposable
+namespace BeeHive;
+
+public class Hive<TRequest, TResult> : IDisposable
 {
-    private readonly IList<HiveThreadPool> _threadPools = new List<HiveThreadPool>();
+    private readonly Compute<TRequest, TResult> _compute;
+    private readonly HiveThreadPool _threadPool;
+    private readonly ConcurrentSet<HiveResultCollection<TResult>> _resultCollections = new();
 
-    public HiveComputation<TRequest, TResult> AddComputation<TRequest, TResult>(
-        Func<TRequest, TResult> computationFunc,
-        Func<ComputationConfiguration, ComputationConfiguration>? configure = null)
+    public Hive(Compute<TRequest, TResult> compute, HiveConfiguration configuration)
     {
-        var computeAsync = computationFunc.ToComputeDelegate();
-        return AddComputation(computeAsync, configure);
+        _compute = compute;
+        _threadPool = new HiveThreadPool(configuration).Start();
     }
 
-    public HiveComputation<TRequest, TResult> AddComputation<TRequest, TResult>(
-        Func<TRequest, Task<TResult>> computationFunc,
-        Func<ComputationConfiguration, ComputationConfiguration>? configure = null)
+    public Task<Result<TResult>> EnqueueTask(TRequest request)
     {
-        var computeAsync = computationFunc.ToComputeDelegate();
-        return AddComputation(computeAsync, configure);
+        var completionSource = new TaskCompletionSource<Result<TResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var computation = CreateComputation(request, completionSource);
+        
+        _threadPool.Queue(computation);
+
+        return completionSource.Task;
     }
 
-    public HiveComputation<TRequest, TResult> AddComputation<TRequest, TResult>(
-        Func<TRequest, ValueTask<TResult>> computationFunc,
-        Func<ComputationConfiguration, ComputationConfiguration>? configure = null)
+    public Hive<TRequest, TResult> Start()
     {
-        var computeAsync = computationFunc.ToComputeDelegate();
-        return AddComputation(computeAsync, configure);
+        _threadPool.Start();
+        return this;
     }
 
-    public HiveComputation<TRequest, TResult> AddComputation<TRequest, TResult>(
-        Compute<TRequest, TResult> compute,
-        Func<ComputationConfiguration, ComputationConfiguration>? configure = null)
+    public void Stop() => _threadPool.Stop();
+
+    public void Dispose() => Stop();
+
+    public BlockingCollection<Result<TResult>> CreateBlockingResults()
     {
-        var defaultConfig = ComputationConfiguration.Default;
-        var config = configure?.Invoke(defaultConfig) ?? defaultConfig;
+        var collection = new HiveResultCollection<TResult>(RemoveDisposedCollection);
+        _resultCollections.Add(collection);
 
-        var pool = new HiveThreadPool(config).Start();        
-        _threadPools.Add(pool);
-
-        return new HiveComputation<TRequest, TResult>(compute, pool);
+        return collection;
     }
 
-    public void Dispose()
+    private Action CreateComputation(TRequest request, TaskCompletionSource<Result<TResult>> completionSource)
     {
-        _threadPools.ForEach(pool => pool.Stop());
-        _threadPools.Clear();
+        void OnResult(Result<TResult> result)
+        {
+            AddResult(result);
+            completionSource.SetResult(result);
+        }
+
+        return () =>
+        {
+            var awaiter = _compute(request, CancellationToken.None).GetAwaiter();
+            awaiter.OnCompleted(() =>
+            {
+                try
+                {
+                    var resultValue = awaiter.GetResult();
+                    var result = Result<TResult>.Value(resultValue);
+                    OnResult(result);
+                }
+                catch (Exception ex)
+                {
+                    var error = Result<TResult>.Error(ex);
+                    OnResult(error);
+                }
+            });            
+        };
     }
+
+    private void AddResult(Result<TResult> result) =>
+        _resultCollections.ForEach(collection => collection.Add(result));
+
+    private void RemoveDisposedCollection(HiveResultCollection<TResult> collection) =>
+        _resultCollections.Remove(collection);
 }

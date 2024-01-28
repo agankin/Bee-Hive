@@ -1,12 +1,12 @@
 ﻿namespace BeeHive;
 
-public record ComputationConfiguration
+public record HiveConfiguration
 {
     private const int INFINITE = -1;
 
-    private ComputationConfiguration() { }
+    private HiveConfiguration() { }
 
-    public static readonly ComputationConfiguration Default = new ComputationConfiguration
+    public static readonly HiveConfiguration Default = new HiveConfiguration
     {
         MinLiveThreads = 1,
         MaxLiveThreads = 1,

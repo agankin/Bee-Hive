@@ -13,7 +13,7 @@ internal class HiveThreadPool
     private PoolState _state = PoolState.Created;
     private volatile int _threadsCount;
 
-    public HiveThreadPool(ComputationConfiguration configuration)
+    public HiveThreadPool(HiveConfiguration configuration)
     {
         _minLiveThreads = configuration.MinLiveThreads;
         _maxLiveThreads = configuration.MaxLiveThreads;
@@ -30,11 +30,8 @@ internal class HiveThreadPool
 
         _state = PoolState.Running;
 
-        for (var threadIdx = 0; threadIdx < _minLiveThreads; threadIdx++)
-        {
+        for (_threadsCount = 0; _threadsCount < _minLiveThreads; _threadsCount++)
             StartThread(_cancellationTokenSource.Token);
-            _threadsCount++;
-        }
 
         return this;
     }

@@ -1,23 +1,21 @@
 ﻿using BeeHive;
 
-var hive = new Hive();
-
-var computeSquares = hive.AddComputation<int, int>(
-    Square,
-    config => config
+var computeSquaresHive = Hive.ToCompute<int, int>(Square)
+    .WithConfiguration(config => config
         .MinLiveThreads(3)
         .MaxLiveThreads(5)
-        .ThreadWaitForNext(3000));
+        .ThreadWaitForNext(3000))
+    .Build();
 
-var computations = QueueComputations(computeSquares);
+var computations = QueueComputations(computeSquaresHive);
 await Task.WhenAll(computations);
 
 Console.ReadKey(true);
 
-IEnumerable<Task> QueueComputations(HiveComputation<int, int> computeSquares)
+IEnumerable<Task> QueueComputations(Hive<int, int> computeSquaresHive)
 {
     for (var i = 0; i < 30; i++)
-        yield return computeSquares.EnqueueTask(i)
+        yield return computeSquaresHive.EnqueueTask(i)
             .ContinueWith(task => task.Result.Map(value => 
             {
                 Log($"Result: {value}");
