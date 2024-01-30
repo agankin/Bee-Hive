@@ -1,6 +1,6 @@
 namespace BeeHive;
 
-internal class ConsoleLogger
+internal class DebugLogger
 {
     public static void Log(string message)
     {

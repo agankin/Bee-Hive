@@ -7,21 +7,22 @@ internal class HiveThreadPool
 
     private readonly int _minLiveThreads;
     private readonly int _maxLiveThreads;
-
+    
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     
     private PoolState _state = PoolState.Created;
     private volatile int _threadsCount;
 
-    public HiveThreadPool(HiveConfiguration configuration)
+    public HiveThreadPool(HiveConfiguration configuration, HiveComputationQueue computationQueue)
     {
         _minLiveThreads = configuration.MinLiveThreads;
         _maxLiveThreads = configuration.MaxLiveThreads;
 
-        ComputationQueue = new(configuration.ThreadWaitForNextMilliseconds);
+        ComputationQueue = computationQueue;
+        ComputationQueue.Enqueueing += OnRequestEnqueueing;
     }
 
-    internal BlockingQueue<Action> ComputationQueue { get; }
+    internal HiveComputationQueue ComputationQueue { get; }
 
     public HiveThreadPool Start()
     {
@@ -47,14 +48,6 @@ internal class HiveThreadPool
         _cancellationTokenSource.Cancel();
     }
 
-    public void Queue(Action computation)
-    {
-        if (RequestStartingThread())
-            StartThread(_cancellationTokenSource.Token);
-
-        ComputationQueue.Enqueue(computation);
-    }
-
     internal bool RequestFinishingThread(HiveThread thread)
     {
         var canFinish = RequestFinishingThread();
@@ -64,12 +57,10 @@ internal class HiveThreadPool
         return canFinish;
     }
 
-    private void StartThread(CancellationToken cancellationToken)
+    private void OnRequestEnqueueing()
     {
-        var newThread = new HiveThread(this, cancellationToken);
-        newThread.Run();
-
-        _threads.Add(newThread);
+        if (RequestStartingThread())
+            StartThread(_cancellationTokenSource.Token);
     }
 
     private bool RequestStartingThread()
@@ -97,6 +88,14 @@ internal class HiveThreadPool
             
             return canFinish;
         }
+    }
+
+    private void StartThread(CancellationToken cancellationToken)
+    {
+        var newThread = new HiveThread(this, cancellationToken);
+        newThread.Run();
+
+        _threads.Add(newThread);
     }
 
     private enum PoolState

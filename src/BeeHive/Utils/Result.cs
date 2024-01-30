@@ -4,47 +4,77 @@ public readonly struct Result<TValue>
 {
     private readonly TValue? _value;
     private readonly Exception? _error;
-    private readonly bool _hasValue;
+    private readonly ResultState _state;
     
     public Result()
     {
+        _state = ResultState.Success;
         _value = default;
         _error = default;
-        _hasValue = true;
     }
 
-    private Result(bool hasValue, TValue? value, Exception? error)
+    private Result(ResultState state, TValue? value, Exception? error)
     {
-        _hasValue = hasValue;
+        _state = ResultState.Success;
         _value = value;
-        _error = _hasValue ? error : error.ArgNotNull(nameof(error));
+        _error = state == ResultState.Error ? error.ArgNotNull(nameof(error)) : default;
     }
 
     public static Result<TValue> Value(TValue? value) =>
-        new Result<TValue>(hasValue: true, value, error: default);
+        new Result<TValue>(state: ResultState.Success, value, error: default);
 
     public static Result<TValue> Error(Exception error) =>
-        new Result<TValue>(hasValue: false, value: default, error.ArgNotNull(nameof(error)));
+        new Result<TValue>(state: ResultState.Error, value: default, error.ArgNotNull(nameof(error)));
+
+    public static Result<TValue> Cancelled() =>
+        new Result<TValue>(state: ResultState.Cancelled, value: default, error: default);
 
     public Result<TResult> Map<TResult>(Func<TValue?, TResult> mapValue) =>
-        _hasValue
-            ? Result<TResult>.Value(mapValue(_value))
-            : Result<TResult>.Error(_error.NotNull("error"));
+        _state switch
+        {
+            ResultState.Success => Result<TResult>.Value(mapValue(_value)),
+            ResultState.Error => Result<TResult>.Error(_error.NotNull("error")),
+            ResultState.Cancelled => Result<TResult>.Cancelled(),
+            _ => throw GetUnknownState(_state)
+        };
     
-    public TResult Match<TResult>(Func<TValue?, TResult> mapValue, Func<Exception, TResult> mapError) =>
-        _hasValue
-            ? mapValue(_value)
-            : mapError(_error.NotNull("error"));
-
-    public void Match(Action<TValue?> onValue, Action<Exception> onError)
+    public TResult Match<TResult>(
+        Func<TValue?, TResult> mapValue,
+        Func<Exception, TResult> mapError,
+        Func<TResult> mapCancelled)
     {
-        if (_hasValue)
+        var result = _state switch
         {
-            onValue(_value);
-        }
-        else
+            ResultState.Success => mapValue(_value),
+            ResultState.Error => mapError(_error.NotNull("error")),
+            ResultState.Cancelled => mapCancelled(),
+            _ => throw GetUnknownState(_state)
+        };
+
+        return result;
+    }
+
+    public void Match(Action<TValue?> onValue, Action<Exception> onError, Action onCancelled)
+    {
+        switch (_state)
         {
-            onError(_error.NotNull("error"));
+            case ResultState.Success:
+                onValue(_value);
+                break;
+
+            case ResultState.Error:
+                onError(_error.NotNull());
+                break;
+
+            case ResultState.Cancelled:
+                onCancelled();
+                break;
+
+            default:
+                throw GetUnknownState(_state);
         }
     }
+    
+    private static Exception GetUnknownState(ResultState state) =>
+        new Exception($"Unknown {nameof(ResultState)} value: {state}.");
 }

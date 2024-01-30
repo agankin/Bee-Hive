@@ -2,17 +2,19 @@ namespace BeeHive;
 
 internal class HiveSynchronizationContext : SynchronizationContext
 {
-    private readonly HiveThreadPool _threadPool;
+    private readonly HiveComputationQueue _computationQueue;
 
-    internal HiveSynchronizationContext(HiveThreadPool threadPool)
+    internal HiveSynchronizationContext(HiveComputationQueue computationQueue)
     {
-        _threadPool = threadPool;
+        _computationQueue = computationQueue;
     }
 
     public override void Post(SendOrPostCallback d, object? state)
     {
-        var action = () => d.Invoke(state);
-        _threadPool.Queue(action);
+        var continuation = () => d.Invoke(state);
+        var continuationComputation = new HiveComputation(continuation);
+        
+        _computationQueue.Enqueue(continuationComputation);
     }
 
     public override void Send(SendOrPostCallback d, object? state) => throw new NotSupportedException();

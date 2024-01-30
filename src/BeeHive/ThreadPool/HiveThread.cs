@@ -1,6 +1,6 @@
 ﻿namespace BeeHive;
 
-using static ConsoleLogger;
+using static DebugLogger;
 
 internal class HiveThread
 {    
@@ -38,7 +38,7 @@ internal class HiveThread
             if (hasValue)
             {
                 Log("Invoking computation..."); 
-                computation?.Invoke();
+                computation.Invoke();
             }
 
             dequeueNext = hasValue;
@@ -49,7 +49,7 @@ internal class HiveThread
 
     private void InitializeSynchronizationContext()
     {
-        var ctx = new HiveSynchronizationContext(_threadPool);
+        var ctx = new HiveSynchronizationContext(_threadPool.ComputationQueue);
         SynchronizationContext.SetSynchronizationContext(ctx);
     }
 }

@@ -1,25 +1,28 @@
+using System.Collections;
 using System.Collections.Concurrent;
 
 namespace BeeHive;
 
-internal class BlockingQueue<TValue>
+internal class BlockingQueue<TItem> : IEnumerable<TItem>
 {
     private readonly SemaphoreSlim _semaphore = new(0);
-    private readonly ConcurrentQueue<TValue> _queue = new();
+    private readonly ConcurrentQueue<TItem> _queue = new();
 
     private readonly int _waitForNextMilliseconds;
 
     public BlockingQueue(int waitForNextMilliseconds) => _waitForNextMilliseconds = waitForNextMilliseconds;
 
-    public void Enqueue(TValue value)
+    public int Count => _queue.Count;
+    
+    public void Enqueue(TItem item)
     {
-        _queue.Enqueue(value);
+        OnEnqueueing(item);
+        
+        _queue.Enqueue(item);
         _semaphore.Release();
     }
 
-    public int Count => _queue.Count;
-
-    public DequeueResult<TValue> DequeueOrWait(Func<bool> canSkipWaitingForNext, CancellationToken cancellationToken)
+    public DequeueResult<TItem> DequeueOrWait(Func<bool> canSkipWaitingForNext, CancellationToken cancellationToken)
     {
         if (_queue.TryDequeue(out var next))
             return new(true, next);
@@ -34,6 +37,10 @@ internal class BlockingQueue<TValue>
         }
     }
 
+    public IEnumerator<TItem> GetEnumerator() => _queue.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => _queue.GetEnumerator();
+
     private bool WaitForNext(CancellationToken cancellationToken)
     {
         try
@@ -45,9 +52,13 @@ internal class BlockingQueue<TValue>
             return false;
         }
     }
+
+    protected virtual void OnEnqueueing(TItem item)
+    {
+    }
 }
 
-public readonly record struct DequeueResult<TValue>(
-    bool HasValue,
-    TValue? Value
+public readonly record struct DequeueResult<TItem>(
+    bool HasItem,
+    TItem? Item
 );
