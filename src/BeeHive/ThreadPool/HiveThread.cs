@@ -33,15 +33,14 @@ internal class HiveThread
         while (dequeueNext)
         {
             var requestFinishing = () => _threadPool.RequestFinishingThread(this);
-            var (hasValue, computation) = _threadPool.ComputationQueue.DequeueOrWait(requestFinishing, _cancellationToken);
-            
-            if (hasValue)
+            var hasNext = _threadPool.ComputationQueue.TryDequeueOrWait(requestFinishing, _cancellationToken, out var next);
+            if (hasNext)
             {
                 Log("Invoking computation..."); 
-                computation.Invoke();
+                next.Invoke();
             }
 
-            dequeueNext = hasValue;
+            dequeueNext = hasNext;
         }
 
         Log("Hive thread finished.");

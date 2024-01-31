@@ -2,12 +2,10 @@ namespace BeeHive;
 
 internal readonly struct HiveComputation
 {
-    private readonly Action _compute;
-
     public HiveComputation(Action compute)
     {
-        _compute = compute;
+        Compute = compute;
     }
 
-    internal void Invoke() => _compute();
+    public Action Compute { get; }
 }

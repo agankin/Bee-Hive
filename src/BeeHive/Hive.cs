@@ -20,7 +20,7 @@ public class Hive<TRequest, TResult> : IDisposable
     public HiveTask<TResult> EnqueueTask(TRequest request)
     {
         var (computation, task) = _computationFactory.Create(request);
-        _computationQueue.Enqueue(computation);
+        _computationQueue.EnqueueComputation(computation);
 
         return task;
     }

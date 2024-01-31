@@ -19,7 +19,7 @@ internal class HiveThreadPool
         _maxLiveThreads = configuration.MaxLiveThreads;
 
         ComputationQueue = computationQueue;
-        ComputationQueue.Enqueueing += OnRequestEnqueueing;
+        ComputationQueue.Enqueueing += OnComputationEnqueueing;
     }
 
     internal HiveComputationQueue ComputationQueue { get; }
@@ -57,7 +57,7 @@ internal class HiveThreadPool
         return canFinish;
     }
 
-    private void OnRequestEnqueueing()
+    private void OnComputationEnqueueing()
     {
         if (RequestStartingThread())
             StartThread(_cancellationTokenSource.Token);
