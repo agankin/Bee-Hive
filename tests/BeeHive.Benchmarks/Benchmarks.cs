@@ -14,9 +14,8 @@ public class Benchmarks
     public void Setup()
     {
         _hive = Hive.ToCompute<Unit, int>(Compute)
-            .WithConfiguration(config => config
-                .MinLiveThreads(DegreeOfParallelism)
-                .MaxLiveThreads(DegreeOfParallelism))
+            .WithMinLiveThreads(DegreeOfParallelism)
+            .WithMaxLiveThreads(DegreeOfParallelism)
             .Build();
     }
 

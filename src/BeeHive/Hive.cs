@@ -10,10 +10,10 @@ public class Hive<TRequest, TResult> : IDisposable
 
     private readonly ConcurrentSet<HiveResultCollection<TResult>> _resultCollections = new();
 
-    public Hive(Compute<TRequest, TResult> compute, HiveConfiguration configuration)
+    internal Hive(Compute<TRequest, TResult> compute, HiveConfiguration configuration)
     {
         _computationFactory = new HiveComputationFactory<TRequest, TResult>(compute, OnResult);
-        _computationQueue = new HiveComputationQueue(configuration.ThreadWaitForNextMilliseconds);
+        _computationQueue = new HiveComputationQueue(configuration.ThreadIdleBeforeStop);
         _threadPool = new HiveThreadPool(configuration, _computationQueue).Start();
     }
 

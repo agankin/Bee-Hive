@@ -1,10 +1,9 @@
 ﻿using BeeHive;
 
 var computeSquaresHive = Hive.ToCompute<int, int>(Square)
-    .WithConfiguration(config => config
-        .MinLiveThreads(3)
-        .MaxLiveThreads(5)
-        .ThreadWaitForNext(3000))
+    .WithMinLiveThreads(3)
+    .WithMaxLiveThreads(5)
+    .WithThreadIdleBeforeStop(3000)
     .Build();
 
 var computations = QueueComputations(computeSquaresHive);
@@ -26,7 +25,6 @@ IEnumerable<Task> QueueComputations(Hive<int, int> computeSquaresHive)
 async ValueTask<int> Square(int number)
 {
     Log($"Before sleep and computing square of {number}...");
-    Thread.Sleep(1000);
     await Task.Delay(1000);
 
     Log($"After sleep next computing square of {number}...");

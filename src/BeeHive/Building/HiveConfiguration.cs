@@ -1,6 +1,6 @@
 ﻿namespace BeeHive;
 
-public record HiveConfiguration
+internal record HiveConfiguration
 {
     private const int INFINITE = -1;
 
@@ -10,12 +10,12 @@ public record HiveConfiguration
     {
         MinLiveThreads = 1,
         MaxLiveThreads = 1,
-        ThreadWaitForNextMilliseconds = INFINITE
+        ThreadIdleBeforeStop = INFINITE
     };
 
     internal int MinLiveThreads { get; init; }
 
     internal int MaxLiveThreads { get; init; }
 
-    internal int ThreadWaitForNextMilliseconds { get; init; }
+    internal int ThreadIdleBeforeStop { get; init; }
 }
