@@ -1,7 +1,10 @@
+using System.Diagnostics;
+
 namespace BeeHive;
 
 internal class DebugLogger
 {
+    [Conditional("DEBUG")]
     public static void Log(string message)
     {
         var time = DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss:FFF");

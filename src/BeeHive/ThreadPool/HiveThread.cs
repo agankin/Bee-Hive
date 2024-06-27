@@ -29,22 +29,22 @@ internal class HiveThread
         Log("Hive thread started.");
         InitializeSynchronizationContext();
 
-        var dequeueNext = true;
-        while (dequeueNext)
+        var goOn = true;
+        while (goOn)
         {
-            var requestFinishing = () => _threadPool.RequestFinishingThread(this);
+            var canFinish = () => _threadPool.RequestFinishingThread(this);
             
-            var hasNext = _threadPool.ComputationQueue.TryDequeueOrWait(requestFinishing, _cancellationToken, out var next);
-            if (hasNext)
+            var dequedNext = _threadPool.ComputationQueue.TryDequeueOrWait(canFinish, _cancellationToken, out var next);
+            if (dequedNext)
             {
                 Log("Invoking computation..."); 
                 next?.Invoke();
             }
 
-            dequeueNext = hasNext;
+            goOn = dequedNext;
         }
 
-        Log("Hive thread finished.");
+        Log("Hive thread stopped.");
     }
 
     private void InitializeSynchronizationContext()

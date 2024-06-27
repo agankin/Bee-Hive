@@ -1,11 +1,5 @@
 namespace BeeHive;
 
-internal readonly struct HiveComputation
-{
-    public HiveComputation(Action compute)
-    {
-        Compute = compute;
-    }
-
-    public Action Compute { get; }
-}
+internal readonly record struct HiveComputation(
+    Action Compute
+);

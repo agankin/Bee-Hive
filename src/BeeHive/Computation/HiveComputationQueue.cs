@@ -10,11 +10,11 @@ internal class HiveComputationQueue
     private readonly ConcurrentQueue<HiveComputation> _computationQueue = new();
     private readonly ConcurrentQueue<Action> _continuationQueue = new();
 
-    private readonly int _waitForNextMilliseconds;
+    private readonly int _threadIdleBeforeStop;
 
-    public HiveComputationQueue(int waitForNextMilliseconds)
+    public HiveComputationQueue(int threadIdleBeforeStop)
     {
-        _waitForNextMilliseconds = waitForNextMilliseconds;
+        _threadIdleBeforeStop = threadIdleBeforeStop;
     }
 
     public event Action? Enqueueing;
@@ -37,14 +37,14 @@ internal class HiveComputationQueue
         _semaphore.Release();
     }
 
-    public bool TryDequeueOrWait(Func<bool> canSkipWaitingForNext, CancellationToken cancellationToken, [MaybeNullWhen(false)] out Action next)
+    public bool TryDequeueOrWait(Func<bool> canFinish, CancellationToken cancellationToken, [MaybeNullWhen(false)] out Action next)
     {
         if (TryDequeue(out next))
             return true;
 
         while (true)
         {
-            if (!WaitForNext(cancellationToken) && canSkipWaitingForNext())
+            if (!WaitForNext(cancellationToken) && canFinish())
                 return false;
 
             if (TryDequeue(out next))
@@ -74,7 +74,7 @@ internal class HiveComputationQueue
     {
         try
         {
-            return _semaphore.Wait(_waitForNextMilliseconds, cancellationToken);
+            return _semaphore.Wait(_threadIdleBeforeStop, cancellationToken);
         }
         catch (OperationCanceledException)
         {
