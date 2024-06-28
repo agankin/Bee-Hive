@@ -17,7 +17,8 @@ public class Hive<TRequest, TResult> : IDisposable
         _threadPool = new HiveThreadPool(configuration, _computationQueue).Start();
     }
 
-    public HiveTask<TResult> EnqueueTask(TRequest request)
+    /// <summary>
+    public HiveTask<TResult> Compute(TRequest request)
     {
         var (computation, task) = _computationFactory.Create(request);
         _computationQueue.EnqueueComputation(computation);
@@ -35,7 +36,8 @@ public class Hive<TRequest, TResult> : IDisposable
 
     public void Dispose() => Stop();
 
-    public BlockingCollection<Result<TResult>> CreateBlockingResults()
+    /// <summary>
+    public BlockingCollection<Result<TResult>> CreateResultCollection()
     {
         var collection = new HiveResultCollection<TResult>(RemoveDisposedCollection);
         _resultCollections.Add(collection);

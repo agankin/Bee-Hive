@@ -25,7 +25,7 @@ internal static class FuncExtensions
         return async (request, _) =>
         {
             var result = await func(request);
-            return await new ValueTask<TResult>(result);
+            return result;
         };
     }
 
@@ -34,7 +34,7 @@ internal static class FuncExtensions
         return async (request, cancellationToken) =>
         {
             var result = await func(request, cancellationToken);
-            return await new ValueTask<TResult>(result);
+            return result;
         };
     }
 
@@ -43,7 +43,7 @@ internal static class FuncExtensions
         return async (request, _) =>
         {
             var result = await func(request);
-            return await new ValueTask<TResult>(result);
+            return result;
         };
     }
 
@@ -52,7 +52,7 @@ internal static class FuncExtensions
         return async (request, cancellationToken) =>
         {
             var result = await func(request, cancellationToken);
-            return await new ValueTask<TResult>(result);
+            return result;
         };
     }
 }

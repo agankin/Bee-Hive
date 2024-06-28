@@ -21,19 +21,18 @@ internal class HiveComputationFactory<TRequest, TResult>
         }
 
         var cancellationTokenSource = new CancellationTokenSource();
-        var computeAction = () =>
+        void computeAction()
         {
             var cancellationToken = cancellationTokenSource.Token;
             var awaiter = _compute(request, cancellationToken).GetAwaiter();
-            
+
             awaiter.OnCompleted(() =>
             {
                 try
                 {
-                    var resultValue = awaiter.GetResult();
                     var result = cancellationToken.IsCancellationRequested
                         ? Result<TResult>.Cancelled()
-                        : Result<TResult>.Value(resultValue);
+                        : Result<TResult>.FromValue(awaiter.GetResult());
                     OnCompleted(result);
                 }
                 catch (OperationCanceledException)
@@ -43,11 +42,11 @@ internal class HiveComputationFactory<TRequest, TResult>
                 }
                 catch (Exception ex)
                 {
-                    var errorResult = Result<TResult>.Error(ex);
+                    var errorResult = Result<TResult>.FromError(ex);
                     OnCompleted(errorResult);
                 }
-            });    
-        };
+            });
+        }
 
         var computation = new HiveComputation(computeAction);
         var task = new HiveTask<TResult>(taskCompletionSource.Task, cancellationTokenSource);

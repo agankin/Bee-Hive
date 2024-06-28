@@ -48,11 +48,11 @@ public class Benchmarks
     [Benchmark]
     public void HiveComputation()
     {
-        var results = _hive.CreateBlockingResults().GetConsumingEnumerable();
+        var results = _hive.CreateResultCollection().GetConsumingEnumerable();
 
         for (var runIdx = 0; runIdx < ComputeRunCount; runIdx++)
         {
-            _hive.EnqueueTask(Unit.Value);
+            _hive.Compute(Unit.Value);
         }
 
         var resultCount = 0;
@@ -70,7 +70,7 @@ public class Benchmarks
     {
         var threads = new List<Thread>();
 
-        Thread CreateComputationThread(int computeRunCount) => new Thread(() => {
+        Thread CreateComputationThread(int computeRunCount) => new(() => {
                 for (var runIdx = 0; runIdx < computeRunCount; runIdx++)
                 {
                     var result = Compute(Unit.Value);
@@ -107,8 +107,8 @@ public class Benchmarks
         return result;
     }
 
-    private struct Unit
+    private readonly struct Unit
     {
-        public static readonly Unit Value = new Unit();
+        public static readonly Unit Value = new();
     }
 }

@@ -14,7 +14,7 @@ Console.ReadKey(true);
 IEnumerable<Task> QueueComputations(Hive<int, int> computeSquaresHive)
 {
     for (var i = 0; i < 30; i++)
-        yield return computeSquaresHive.EnqueueTask(i).Task
+        yield return computeSquaresHive.Compute(i).Task
             .ContinueWith(task => task.Result.Map(value => 
             {
                 Log($"Result: {value}");
