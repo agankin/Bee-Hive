@@ -5,23 +5,28 @@ using static DebugLogger;
 internal class HiveThread
 {    
     private readonly HiveThreadPool _threadPool;
-    private readonly CancellationToken _cancellationToken;
+    private readonly CancellationToken _poolCancellationToken;
 
-    private bool _isRunning;
+    private int _isRunning;
+    private volatile bool _isBusy;
 
-    public HiveThread(HiveThreadPool threadPool, CancellationToken cancellationToken)
+    public HiveThread(HiveThreadPool threadPool, CancellationToken poolCancellationToken)
     {
         _threadPool = threadPool;
-        _cancellationToken = cancellationToken;
+        _poolCancellationToken = poolCancellationToken;
     }
 
-    public void Run()
+    public bool IsBusy => _isBusy;
+
+    public HiveThread Run()
     {
-        if (_isRunning)
+        var isRunning = Interlocked.CompareExchange(ref _isRunning, 1, 0);
+        if (isRunning == 1)
             throw new InvalidOperationException("Hive Thread is already in running state.");
 
-        _isRunning = true;
         Task.Factory.StartNew(QueueHandler, TaskCreationOptions.LongRunning);
+
+        return this;
     }
 
     private void QueueHandler()
@@ -32,19 +37,34 @@ internal class HiveThread
         var goOn = true;
         while (goOn)
         {
-            var canFinish = () => _threadPool.RequestFinishingThread(this);
-            
-            var dequedNext = _threadPool.ComputationQueue.TryDequeueOrWait(canFinish, _cancellationToken, out var next);
-            if (dequedNext)
+            if (_poolCancellationToken.IsCancellationRequested)
+                break;
+
+            var dequed = _threadPool.ComputationQueue.TryDequeueOrWait(RequestFinishing, _poolCancellationToken, out var next);
+            if (dequed)
             {
-                Log("Invoking computation..."); 
-                next?.Invoke();
+                Log("Invoking computation...");
+                Compute(next);
             }
 
-            goOn = dequedNext;
+            goOn = dequed;
         }
 
         Log("Hive thread stopped.");
+    }
+
+    private void Compute(Action? compute)
+    {
+        try
+        {
+            _isBusy = true;
+            compute?.Invoke();
+        }
+        catch {}
+        finally
+        {
+            _isBusy = false;
+        }
     }
 
     private void InitializeSynchronizationContext()
@@ -52,4 +72,6 @@ internal class HiveThread
         var ctx = new HiveSynchronizationContext(_threadPool.ComputationQueue);
         SynchronizationContext.SetSynchronizationContext(ctx);
     }
+
+    private bool RequestFinishing() => _threadPool.RequestFinishingThread(this);
 }

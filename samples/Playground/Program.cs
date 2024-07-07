@@ -6,6 +6,8 @@ var computeSquaresHive = Hive.ToCompute<int, int>(Square)
     .WithThreadIdleBeforeStop(3000)
     .Build();
 
+computeSquaresHive.Run();
+
 var computations = QueueComputations(computeSquaresHive);
 await Task.WhenAll(computations);
 

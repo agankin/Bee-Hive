@@ -1,6 +1,6 @@
 ﻿namespace BeeHive;
 
-internal class HiveThreadPool
+internal class HiveThreadPool : IDisposable
 {
     private readonly object _threadsSyncObject = new();
     private readonly ConcurrentSet<HiveThread> _threads = new();
@@ -10,13 +10,13 @@ internal class HiveThreadPool
     
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     
-    private PoolState _state = PoolState.Created;
+    private volatile int _state = (int)PoolState.Created;
     private volatile int _threadsCount;
 
     public HiveThreadPool(HiveConfiguration configuration, HiveComputationQueue computationQueue)
     {
         _minLiveThreads = configuration.MinLiveThreads;
-        _maxLiveThreads = configuration.MaxLiveThreads;
+        _maxLiveThreads = Math.Max(_minLiveThreads, configuration.MaxLiveThreads);
 
         ComputationQueue = computationQueue;
         ComputationQueue.Enqueueing += OnComputationEnqueueing;
@@ -24,62 +24,94 @@ internal class HiveThreadPool
 
     internal HiveComputationQueue ComputationQueue { get; }
 
-    public HiveThreadPool Start()
+    public HiveThreadPool Run()
     {
-        if (_state != PoolState.Created)
-            throw new InvalidOperationException($"{nameof(HiveThreadPool)} is not in {nameof(PoolState.Created)} state.");
-
-        _state = PoolState.Running;
-
-        for (_threadsCount = 0; _threadsCount < _minLiveThreads; _threadsCount++)
-            StartThread(_cancellationTokenSource.Token);
+        var oldState = Interlocked.CompareExchange(ref _state, (int)PoolState.Running, (int)PoolState.Created);
+        
+        if (oldState != (int)PoolState.Created)
+            throw new InvalidOperationException($"Hive is in \"{oldState}\" state.");
+        
+        StartMinLiveThreads();
 
         return this;
     }
 
-    public void Stop()
+    public void Dispose()
     {
-        if (_state == PoolState.Stopped)
+        var oldState = Interlocked.Exchange(ref _state, (int)PoolState.Disposed);
+        if (oldState == (int)PoolState.Disposed)
             return;
 
-        if (_state != PoolState.Created)
-            throw new InvalidOperationException($"{nameof(HiveThreadPool)} is not in {nameof(PoolState.Running)} state.");
+        ComputationQueue.Enqueueing -= OnComputationEnqueueing;
 
         _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.Dispose();
     }
 
     internal bool RequestFinishingThread(HiveThread thread)
     {
-        var canFinish = RequestFinishingThread();
-        if (canFinish)
+        var finished = RequestFinishingThread();
+        if (finished)
             _threads.Remove(thread);
 
-        return canFinish;
+        return finished;
     }
 
     private void OnComputationEnqueueing()
     {
-        if (RequestStartingThread())
-            StartThread(_cancellationTokenSource.Token);
+        if (_state != (int)PoolState.Running)
+            return;
+
+        if (RequestStartingNewThread())
+            StartNewThread();
     }
 
-    private bool RequestStartingThread()
+    private void StartMinLiveThreads()
     {
+        lock (_threadsSyncObject)
+        {
+            while (_threadsCount < _minLiveThreads)
+            {
+                _threadsCount++;
+                StartNewThread();
+            }
+        }
+    }
+
+    private bool RequestStartingNewThread()
+    {
+        if (IsDisposed())
+            return false;
+
         lock (_threadsSyncObject)
         {
             if (_threadsCount >= _maxLiveThreads)
                 return false;
 
-            var shouldStart = ComputationQueue.Count > 0;
-            if (shouldStart)
+            var busyThreadsCount = _threads.Count(thread => thread.IsBusy);
+            var freeThreadsCount = _threadsCount - busyThreadsCount;
+
+            var mustStart = ComputationQueue.Count > freeThreadsCount;
+            if (mustStart)
                 _threadsCount++;
 
-            return shouldStart;
+            return mustStart;
         }
+    }
+
+    private void StartNewThread()
+    {
+        var cancellationToken = _cancellationTokenSource.Token;
+        var newThread = new HiveThread(this, cancellationToken).Run();
+
+        _threads.Add(newThread);
     }
 
     private bool RequestFinishingThread()
     {
+        if (IsDisposed())
+            return true;
+
         lock (_threadsSyncObject)
         {
             var canFinish = _threadsCount > _minLiveThreads;
@@ -90,20 +122,14 @@ internal class HiveThreadPool
         }
     }
 
-    private void StartThread(CancellationToken cancellationToken)
-    {
-        var newThread = new HiveThread(this, cancellationToken);
-        newThread.Run();
-
-        _threads.Add(newThread);
-    }
+    private bool IsDisposed() => _state == (int)PoolState.Disposed;
 
     private enum PoolState
     {
         Created = 1,
 
-        Running = 1,
+        Running,
 
-        Stopped
+        Disposed
     }
 }

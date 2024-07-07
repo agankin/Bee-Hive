@@ -14,10 +14,15 @@ public class Hive<TRequest, TResult> : IDisposable
     {
         _computationFactory = new HiveComputationFactory<TRequest, TResult>(compute, OnResult);
         _computationQueue = new HiveComputationQueue(configuration.ThreadIdleBeforeStop);
-        _threadPool = new HiveThreadPool(configuration, _computationQueue).Start();
+        _threadPool = new HiveThreadPool(configuration, _computationQueue);
     }
 
-    /// <summary>
+    public Hive<TRequest, TResult> Run()
+    {
+        _threadPool.Run();
+        return this;
+    }
+
     public HiveTask<TResult> Compute(TRequest request)
     {
         var (computation, task) = _computationFactory.Create(request);
@@ -26,15 +31,7 @@ public class Hive<TRequest, TResult> : IDisposable
         return task;
     }
 
-    public Hive<TRequest, TResult> Start()
-    {
-        _threadPool.Start();
-        return this;
-    }
-
-    public void Stop() => _threadPool.Stop();
-
-    public void Dispose() => Stop();
+    public void Dispose() => _threadPool.Dispose();
 
     /// <summary>
     public BlockingCollection<Result<TResult>> CreateResultCollection()
