@@ -1,22 +1,23 @@
 ﻿using BeeHive;
 
-var computeSquaresHive = Hive.ToCompute<int, int>(Square)
+var hive = new HiveBuilder()
     .WithMinLiveThreads(3)
     .WithMaxLiveThreads(5)
     .WithThreadIdleBeforeStop(3000)
     .Build();
+hive.Run();
 
-computeSquaresHive.Run();
+var computeQueue = hive.GetQueueFor<int, int>(Square);
 
-var computations = QueueComputations(computeSquaresHive);
+var computations = QueueComputations(computeQueue);
 await Task.WhenAll(computations);
 
 Console.ReadKey(true);
 
-IEnumerable<Task> QueueComputations(Hive<int, int> computeSquaresHive)
+IEnumerable<Task> QueueComputations(HiveQueue<int, int> computeQueue)
 {
-    for (var i = 0; i < 30; i++)
-        yield return computeSquaresHive.Compute(i).Task
+    for (var i = 0; i < 6; i++)
+        yield return computeQueue.Compute(i).Task
             .ContinueWith(task => task.Result.Map(value => 
             {
                 Log($"Result: {value}");
@@ -27,6 +28,7 @@ IEnumerable<Task> QueueComputations(Hive<int, int> computeSquaresHive)
 async ValueTask<int> Square(int number)
 {
     Log($"Before sleep and computing square of {number}...");
+    Thread.Sleep(1000);
     await Task.Delay(1000);
 
     Log($"After sleep next computing square of {number}...");

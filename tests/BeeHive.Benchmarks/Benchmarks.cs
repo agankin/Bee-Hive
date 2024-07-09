@@ -8,15 +8,16 @@ public class Benchmarks
     private const int ComputeSumOfNumbers = 1000000;
     private const int DegreeOfParallelism = 4;
 
-    private Hive<Unit, int> _hive = null!;
+    private Hive _hive = null!;
 
     [GlobalSetup]
     public void Setup()
     {
-        _hive = Hive.ToCompute<Unit, int>(Compute)
+        _hive = new HiveBuilder()
             .WithMinLiveThreads(DegreeOfParallelism)
             .WithMaxLiveThreads(DegreeOfParallelism)
             .Build();
+        _hive.Run();
     }
 
     [GlobalCleanup]
@@ -48,11 +49,12 @@ public class Benchmarks
     [Benchmark]
     public void HiveComputation()
     {
-        var results = _hive.CreateNewResults().GetConsumingEnumerable();
+        var computeQueue = _hive.GetQueueFor<Unit, int>(Compute);
+        var results = computeQueue.CreateNewResults().GetConsumingEnumerable();
 
         for (var runIdx = 0; runIdx < ComputeRunCount; runIdx++)
         {
-            _hive.Compute(Unit.Value);
+            computeQueue.Compute(Unit.Value);
         }
 
         var resultCount = 0;

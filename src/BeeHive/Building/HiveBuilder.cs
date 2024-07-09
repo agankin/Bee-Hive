@@ -1,13 +1,10 @@
 namespace BeeHive;
 
-public class HiveBuilder<TRequest, TResult>
+public class HiveBuilder
 {
-    private readonly Compute<TRequest, TResult> _compute;
     private HiveConfiguration _configuration = HiveConfiguration.Default;
 
-    public HiveBuilder(Compute<TRequest, TResult> compute) => _compute = compute;
-
-    public HiveBuilder<TRequest, TResult> WithMinLiveThreads(int minLiveThreads)
+    public HiveBuilder WithMinLiveThreads(int minLiveThreads)
     {
         if (minLiveThreads < 1)
             throw new ArgumentException("Minimal threads count cannot be less 1.", nameof(minLiveThreads));
@@ -16,7 +13,7 @@ public class HiveBuilder<TRequest, TResult>
         return this;
     }
 
-    public HiveBuilder<TRequest, TResult> WithMaxLiveThreads(int maxLiveThreads)
+    public HiveBuilder WithMaxLiveThreads(int maxLiveThreads)
     {
         if (maxLiveThreads < 1)
             throw new ArgumentException("Maximal threads count cannot be less 1.", nameof(maxLiveThreads));
@@ -25,11 +22,11 @@ public class HiveBuilder<TRequest, TResult>
         return this;
     }
 
-    public HiveBuilder<TRequest, TResult> WithThreadIdleBeforeStop(int milliseconds)
+    public HiveBuilder WithThreadIdleBeforeStop(int milliseconds)
     {
         _configuration = _configuration with { ThreadIdleBeforeStop = milliseconds };
         return this;
     }
 
-    public Hive<TRequest, TResult> Build() => new Hive<TRequest, TResult>(_compute, _configuration);
+    public Hive Build() => new Hive(_configuration);
 }

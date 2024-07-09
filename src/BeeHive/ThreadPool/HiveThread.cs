@@ -31,7 +31,7 @@ internal class HiveThread
 
     private void QueueHandler()
     {
-        Log("Hive thread started.");
+        LogDebug("Hive thread started.");
         InitializeSynchronizationContext();
 
         var goOn = true;
@@ -43,14 +43,14 @@ internal class HiveThread
             var dequed = _threadPool.ComputationQueue.TryDequeueOrWait(RequestFinishing, _poolCancellationToken, out var next);
             if (dequed)
             {
-                Log("Invoking computation...");
+                LogDebug("Invoking computation...");
                 Compute(next);
             }
 
             goOn = dequed;
         }
 
-        Log("Hive thread stopped.");
+        LogDebug("Hive thread stopped.");
     }
 
     private void Compute(Action? compute)

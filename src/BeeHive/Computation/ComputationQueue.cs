@@ -31,8 +31,6 @@ internal class ComputationQueue
 
     public void EnqueueContinuation(Action continuation)
     {
-        Enqueueing?.Invoke();
-
         _continuationQueue.Enqueue(continuation);
         _semaphore.Release();
     }

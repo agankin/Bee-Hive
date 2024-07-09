@@ -91,7 +91,7 @@ internal class HiveThreadPool : IDisposable
             var busyThreadsCount = _threads.Count(thread => thread.IsBusy);
             var freeThreadsCount = _threadsCount - busyThreadsCount;
 
-            var mustStart = ComputationQueue.Count > freeThreadsCount;
+            var mustStart = ComputationQueue.Count + 1 > freeThreadsCount;
             if (mustStart)
                 _threadsCount++;
 
