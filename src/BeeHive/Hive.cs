@@ -5,7 +5,7 @@ namespace BeeHive;
 public class Hive<TRequest, TResult> : IDisposable
 {
     private readonly HiveComputationFactory<TRequest, TResult> _computationFactory;
-    private readonly HiveComputationQueue _computationQueue;
+    private readonly ComputationQueue _computationQueue;
     private readonly HiveThreadPool _threadPool;
 
     private readonly ConcurrentSet<HiveResultCollection<TResult>> _resultCollections = new();
@@ -13,7 +13,7 @@ public class Hive<TRequest, TResult> : IDisposable
     internal Hive(Compute<TRequest, TResult> compute, HiveConfiguration configuration)
     {
         _computationFactory = new HiveComputationFactory<TRequest, TResult>(compute, OnResult);
-        _computationQueue = new HiveComputationQueue(configuration.ThreadIdleBeforeStop);
+        _computationQueue = new ComputationQueue(configuration.ThreadIdleBeforeStop);
         _threadPool = new HiveThreadPool(configuration, _computationQueue);
     }
 
@@ -25,17 +25,18 @@ public class Hive<TRequest, TResult> : IDisposable
 
     public HiveTask<TResult> Compute(TRequest request)
     {
-        var (computation, task) = _computationFactory.Create(request);
-        _computationQueue.EnqueueComputation(computation);
+        var (compute, task) = _computationFactory.Create(request);
+        _computationQueue.EnqueueComputation(compute);
 
         return task;
     }
 
     public void Dispose() => _threadPool.Dispose();
 
-    /// <summary>
-    public BlockingCollection<Result<TResult>> CreateResultCollection()
+    public BlockingCollection<Result<TResult>> CreateNewResults()
     {
+        void RemoveDisposedCollection(HiveResultCollection<TResult> collection) => _resultCollections.Remove(collection);
+
         var collection = new HiveResultCollection<TResult>(RemoveDisposedCollection);
         _resultCollections.Add(collection);
 
@@ -43,6 +44,4 @@ public class Hive<TRequest, TResult> : IDisposable
     }
 
     private void OnResult(Result<TResult> result) => _resultCollections.ForEach(collection => collection.Add(result));
-
-    private void RemoveDisposedCollection(HiveResultCollection<TResult> collection) => _resultCollections.Remove(collection);
 }

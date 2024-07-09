@@ -3,16 +3,16 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace BeeHive;
 
-internal class HiveComputationQueue
+internal class ComputationQueue
 {
     private readonly SemaphoreSlim _semaphore = new(0);
     
-    private readonly ConcurrentQueue<HiveComputation> _computationQueue = new();
+    private readonly ConcurrentQueue<Action> _computationQueue = new();
     private readonly ConcurrentQueue<Action> _continuationQueue = new();
 
     private readonly int _threadIdleBeforeStop;
 
-    public HiveComputationQueue(int threadIdleBeforeStop)
+    public ComputationQueue(int threadIdleBeforeStop)
     {
         _threadIdleBeforeStop = threadIdleBeforeStop;
     }
@@ -21,11 +21,11 @@ internal class HiveComputationQueue
 
     public int Count => _computationQueue.Count + _continuationQueue.Count;
 
-    public void EnqueueComputation(HiveComputation computation)
+    public void EnqueueComputation(Action compute)
     {
         Enqueueing?.Invoke();
         
-        _computationQueue.Enqueue(computation);
+        _computationQueue.Enqueue(compute);
         _semaphore.Release();
     }
 
@@ -62,7 +62,7 @@ internal class HiveComputationQueue
 
         if (_computationQueue.TryDequeue(out var nextComputation))
         {
-            action = nextComputation.Compute;
+            action = nextComputation;
             return true;
         }
 

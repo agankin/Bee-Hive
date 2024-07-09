@@ -14,14 +14,15 @@ internal class HiveComputationFactory<TRequest, TResult>
     internal HiveComputationTask<TResult> Create(TRequest request)
     {
         var taskCompletionSource = new TaskCompletionSource<Result<TResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cancellationTokenSource = new CancellationTokenSource();
+        
         void OnCompleted(Result<TResult> result)
         {
             _onCompleted(result);
             taskCompletionSource.SetResult(result);
         }
 
-        var cancellationTokenSource = new CancellationTokenSource();
-        void computeAction()
+        void Compute()
         {
             var cancellationToken = cancellationTokenSource.Token;
             var awaiter = _compute(request, cancellationToken).GetAwaiter();
@@ -48,10 +49,8 @@ internal class HiveComputationFactory<TRequest, TResult>
             });
         }
 
-        var computation = new HiveComputation(computeAction);
         var task = new HiveTask<TResult>(taskCompletionSource.Task, cancellationTokenSource);
-
-        var computationTask = new HiveComputationTask<TResult>(computation, task);
+        var computationTask = new HiveComputationTask<TResult>(Compute, task);
         
         return computationTask;
     }

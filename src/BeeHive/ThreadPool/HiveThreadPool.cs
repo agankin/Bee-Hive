@@ -13,7 +13,7 @@ internal class HiveThreadPool : IDisposable
     private volatile int _state = (int)PoolState.Created;
     private volatile int _threadsCount;
 
-    public HiveThreadPool(HiveConfiguration configuration, HiveComputationQueue computationQueue)
+    public HiveThreadPool(HiveConfiguration configuration, ComputationQueue computationQueue)
     {
         _minLiveThreads = configuration.MinLiveThreads;
         _maxLiveThreads = Math.Max(_minLiveThreads, configuration.MaxLiveThreads);
@@ -22,7 +22,7 @@ internal class HiveThreadPool : IDisposable
         ComputationQueue.Enqueueing += OnComputationEnqueueing;
     }
 
-    internal HiveComputationQueue ComputationQueue { get; }
+    internal ComputationQueue ComputationQueue { get; }
 
     public HiveThreadPool Run()
     {

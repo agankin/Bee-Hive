@@ -1,6 +1,6 @@
 namespace BeeHive;
 
 internal record HiveComputationTask<TResult>(
-    HiveComputation Computation,
+    Action Compute,
     HiveTask<TResult> Task
 );

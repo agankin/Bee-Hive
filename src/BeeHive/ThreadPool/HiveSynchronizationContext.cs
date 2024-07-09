@@ -2,9 +2,9 @@ namespace BeeHive;
 
 internal class HiveSynchronizationContext : SynchronizationContext
 {
-    private readonly HiveComputationQueue _computationQueue;
+    private readonly ComputationQueue _computationQueue;
 
-    internal HiveSynchronizationContext(HiveComputationQueue computationQueue)
+    internal HiveSynchronizationContext(ComputationQueue computationQueue)
     {
         _computationQueue = computationQueue;
     }
