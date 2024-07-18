@@ -1,37 +1,40 @@
-using System.Collections.Concurrent;
+using System.Collections;
 
 namespace BeeHive;
 
-public class HiveQueue<TRequest, TResult>
+public class HiveQueue<TRequest, TResult> : IEnumerable<Computation<TRequest, TResult>>
 {
-    private readonly ComputationQueue _computationQueue;
+    private readonly ComputationQueue _poolComputationQueue;
     private readonly HiveComputationFactory<TRequest, TResult> _computationFactory;
     
-    private readonly ConcurrentSet<HiveResultCollection<TResult>> _resultCollections = new();
+    private readonly ConcurrentSet<Computation<TRequest, TResult>> _computations = new();
+    private readonly Lazy<HiveResultBag<TRequest, TResult>> _resultBag = new(() => new());
 
-    internal HiveQueue(ComputationQueue computationQueue, Compute<TRequest, TResult> compute)
+    internal HiveQueue(ComputationQueue poolComputationQueue, Compute<TRequest, TResult> compute)
     {
-        _computationQueue = computationQueue;
-        _computationFactory = new HiveComputationFactory<TRequest, TResult>(compute, OnResult);
+        _poolComputationQueue = poolComputationQueue;
+        _computationFactory = new HiveComputationFactory<TRequest, TResult>(compute, OnComputationCompleted);
     }
 
-    public HiveTask<TResult> Compute(TRequest request)
+    public HiveTask<TRequest, TResult> Compute(TRequest request)
     {
-        var (compute, task) = _computationFactory.Create(request);
-        _computationQueue.EnqueueComputation(compute);
+        var (computation, task) = _computationFactory.Create(request);
+        _poolComputationQueue.EnqueueComputation(computation.Compute);
 
         return task;
     }
 
-    public BlockingCollection<Result<TResult>> CreateNewResults()
+    public IBlockingReadOnlyCollection<Result<TRequest, TResult>> GetResultBag() => _resultBag.Value;
+
+    public IEnumerator<Computation<TRequest, TResult>> GetEnumerator() => _computations.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    
+    private void OnComputationCompleted(Computation<TRequest, TResult> computation)
     {
-        void RemoveDisposedCollection(HiveResultCollection<TResult> collection) => _resultCollections.Remove(collection);
+        _computations.Remove(computation);
 
-        var collection = new HiveResultCollection<TResult>(RemoveDisposedCollection);
-        _resultCollections.Add(collection);
-
-        return collection;
+        if (_resultBag.IsValueCreated)
+            _resultBag.Value.Add(computation.Result);
     }
-
-    private void OnResult(Result<TResult> result) => _resultCollections.ForEach(collection => collection.Add(result));
 }

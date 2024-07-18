@@ -5,14 +5,16 @@ using static DebugLogger;
 internal class HiveThread
 {    
     private readonly HiveThreadPool _threadPool;
+    private readonly int _idleBeforeStopMilliseconds;
     private readonly CancellationToken _poolCancellationToken;
 
     private int _isRunning;
     private volatile bool _isBusy;
 
-    public HiveThread(HiveThreadPool threadPool, CancellationToken poolCancellationToken)
+    public HiveThread(HiveThreadPool threadPool, int idleBeforeStopMilliseconds, CancellationToken poolCancellationToken)
     {
         _threadPool = threadPool;
+        _idleBeforeStopMilliseconds = idleBeforeStopMilliseconds;
         _poolCancellationToken = poolCancellationToken;
     }
 
@@ -34,20 +36,21 @@ internal class HiveThread
         LogDebug("Hive thread started.");
         InitializeSynchronizationContext();
 
-        var goOn = true;
-        while (goOn)
+        while (true)
         {
             if (_poolCancellationToken.IsCancellationRequested)
                 break;
 
-            var dequed = _threadPool.ComputationQueue.TryDequeueOrWait(RequestFinishing, _poolCancellationToken, out var next);
-            if (dequed)
+            var hasNext = _threadPool.ComputationQueue.TryTakeOrWait(_idleBeforeStopMilliseconds, _poolCancellationToken, out var next);
+            if (hasNext)
             {
                 LogDebug("Invoking computation...");
                 Compute(next);
             }
-
-            goOn = dequed;
+            else if(RequestFinishing())
+            {
+                break;
+            }
         }
 
         LogDebug("Hive thread stopped.");

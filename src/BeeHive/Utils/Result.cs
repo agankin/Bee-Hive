@@ -1,17 +1,18 @@
 namespace BeeHive;
 
-public record Result<TValue>(
+public record Result<TRequest, TResult>(
+    TRequest Request,
     ResultState State,
-    TValue? Value,
+    TResult? Value,
     Exception? Error
 )
 {
-    public static Result<TValue> FromValue(TValue? value) =>
-        new(State: ResultState.Success, value, Error: default);
+    public static Result<TRequest, TResult> FromValue(TRequest request, TResult value) =>
+        new(request, ResultState.Success, value, Error: default);
     
-    public static Result<TValue> FromError(Exception error) =>
-        new(State: ResultState.Error, Value: default, Error: error.ArgNotNull(nameof(error)));
+    public static Result<TRequest, TResult> FromError(TRequest request, Exception error) =>
+        new(request, ResultState.Error, Value: default, Error: error.ArgNotNull(nameof(error)));
 
-    public static Result<TValue> Cancelled() =>
-        new(State: ResultState.Cancelled, Value: default, Error: default);
+    public static Result<TRequest, TResult> Cancelled(TRequest request) =>
+        new(request, ResultState.Cancelled, Value: default, Error: default);
 }

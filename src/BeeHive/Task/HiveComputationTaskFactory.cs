@@ -3,55 +3,73 @@ namespace BeeHive;
 internal class HiveComputationFactory<TRequest, TResult>
 {
     private readonly Compute<TRequest, TResult> _compute;
-    private readonly Action<Result<TResult>> _onCompleted;
+    private readonly Action<Computation<TRequest, TResult>> _onCompleted;
 
-    internal HiveComputationFactory(Compute<TRequest, TResult> compute, Action<Result<TResult>> onCompleted)
+    internal HiveComputationFactory(Compute<TRequest, TResult> compute, Action<Computation<TRequest, TResult>> onCompleted)
     {
         _compute = compute;
         _onCompleted = onCompleted;
     }
 
-    internal HiveComputationTask<TResult> Create(TRequest request)
+    internal HiveComputationTask<TRequest, TResult> Create(TRequest request)
     {
-        var taskCompletionSource = new TaskCompletionSource<Result<TResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskCompletionSource = new TaskCompletionSource<Result<TRequest, TResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var task = taskCompletionSource.Task;
         var cancellationTokenSource = new CancellationTokenSource();
         
-        void OnCompleted(Result<TResult> result)
-        {
-            _onCompleted(result);
-            taskCompletionSource.SetResult(result);
-        }
-
-        void Compute()
-        {
-            var cancellationToken = cancellationTokenSource.Token;
-            var awaiter = _compute(request, cancellationToken).GetAwaiter();
-
-            awaiter.OnCompleted(() =>
-            {
-                try
-                {
-                    var result = cancellationToken.IsCancellationRequested
-                        ? Result<TResult>.Cancelled()
-                        : Result<TResult>.FromValue(awaiter.GetResult());
-                    OnCompleted(result);
-                }
-                catch (OperationCanceledException)
-                {
-                    var cancelledResult = Result<TResult>.Cancelled();
-                    OnCompleted(cancelledResult);
-                }
-                catch (Exception ex)
-                {
-                    var errorResult = Result<TResult>.FromError(ex);
-                    OnCompleted(errorResult);
-                }
-            });
-        }
-
-        var task = new HiveTask<TResult>(taskCompletionSource.Task, cancellationTokenSource);
-        var computationTask = new HiveComputationTask<TResult>(Compute, task);
+        var computation = new Computation<TRequest, TResult>(
+            request,
+            self => Compute(self, cancellationTokenSource.Token, taskCompletionSource),
+            task);
+        var hiveTask = new HiveTask<TRequest, TResult>(request, task, cancellationTokenSource);
         
-        return computationTask;
+        return new(computation, hiveTask);
+    }
+
+    private void Compute(
+        Computation<TRequest, TResult> computation,
+        CancellationToken cancellationToken,
+        TaskCompletionSource<Result<TRequest, TResult>> taskCompletionSource)
+    {
+        var request = computation.Request;
+        if (cancellationToken.IsCancellationRequested)
+        {
+            var result = Result<TRequest, TResult>.Cancelled(request);
+            OnCompleted(computation, result, taskCompletionSource);
+            return;
+        }
+
+        var awaiter = _compute(request, cancellationToken).GetAwaiter();
+        awaiter.OnCompleted(() =>
+        {
+            try
+            {
+                var result = cancellationToken.IsCancellationRequested
+                    ? Result<TRequest, TResult>.Cancelled(request)
+                    : Result<TRequest, TResult>.FromValue(request, awaiter.GetResult());
+                OnCompleted(computation, result, taskCompletionSource);
+            }
+            catch (OperationCanceledException)
+            {
+                var cancelledResult = Result<TRequest, TResult>.Cancelled(request);
+                OnCompleted(computation, cancelledResult, taskCompletionSource);
+            }
+            catch (Exception ex)
+            {
+                var errorResult = Result<TRequest, TResult>.FromError(request, ex);
+                OnCompleted(computation, errorResult, taskCompletionSource);
+            }
+        });
+    }
+
+    private void OnCompleted(
+        Computation<TRequest, TResult> computation,
+        Result<TRequest, TResult> result,
+        TaskCompletionSource<Result<TRequest, TResult>> taskCompletionSource)
+    {
+        computation.SetCompleted(result);  
+
+        _onCompleted(computation);
+        taskCompletionSource.SetResult(result);
     }
 }

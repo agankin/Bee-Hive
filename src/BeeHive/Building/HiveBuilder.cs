@@ -24,7 +24,7 @@ public class HiveBuilder
 
     public HiveBuilder WithThreadIdleBeforeStop(int milliseconds)
     {
-        _configuration = _configuration with { ThreadIdleBeforeStop = milliseconds };
+        _configuration = _configuration with { ThreadIdleBeforeStopMilliseconds = milliseconds };
         return this;
     }
 

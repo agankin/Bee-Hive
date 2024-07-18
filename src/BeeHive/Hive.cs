@@ -7,7 +7,7 @@ public class Hive : IDisposable
 
     internal Hive(HiveConfiguration configuration)
     {
-        _computationQueue = new ComputationQueue(configuration.ThreadIdleBeforeStop);
+        _computationQueue = new ComputationQueue();
         _threadPool = new HiveThreadPool(configuration, _computationQueue);
     }
 

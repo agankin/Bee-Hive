@@ -50,7 +50,7 @@ public class Benchmarks
     public void HiveComputation()
     {
         var computeQueue = _hive.GetQueueFor<Unit, int>(Compute);
-        var results = computeQueue.CreateNewResults().GetConsumingEnumerable();
+        var resultBag = computeQueue.GetResultBag();
 
         for (var runIdx = 0; runIdx < ComputeRunCount; runIdx++)
         {
@@ -58,7 +58,7 @@ public class Benchmarks
         }
 
         var resultCount = 0;
-        foreach (var result in results)
+        while (resultBag.TryTakeOrWait(out var _))
         {
             if (++resultCount == ComputeRunCount)
             {

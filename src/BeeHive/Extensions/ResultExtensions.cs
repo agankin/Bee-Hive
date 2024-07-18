@@ -2,32 +2,32 @@ namespace BeeHive;
 
 public static class ResultExtensions
 {
-    public static Result<TResult> Map<TValue, TResult>(this Result<TValue> result, Func<TValue?, TResult> mapValue)
+    public static Result<TRequest, TResult2> Map<TRequest, TResult, TResult2>(this Result<TRequest, TResult> result, Func<TResult?, TResult2> mapValue)
     {
-        var (state, value, error) = result;
+        var (request, state, value, error) = result;
 
         var mappedResult = state switch
         {
-            ResultState.Success => Result<TResult>.FromValue(mapValue(value)),
-            ResultState.Error => Result<TResult>.FromError(error.NotNull("error")),
-            ResultState.Cancelled => Result<TResult>.Cancelled(),
+            ResultState.Success => Result<TRequest, TResult2>.FromValue(request, mapValue(value)),
+            ResultState.Error => Result<TRequest, TResult2>.FromError(request, error.NotNull("error")),
+            ResultState.Cancelled => Result<TRequest, TResult2>.Cancelled(request),
             _ => throw GetUnknownState(state)
         };
 
         return mappedResult;
     }
     
-    public static TResult Match<TValue, TResult>(
-        this Result<TValue> result,
-        Func<TValue?, TResult> mapValue,
-        Func<Exception, TResult> mapError,
-        Func<TResult> mapCancelled)
+    public static TResult2 Match<TRequest, TResult, TResult2>(
+        this Result<TRequest, TResult> result,
+        Func<TResult, TResult2> mapValue,
+        Func<Exception, TResult2> mapError,
+        Func<TResult2> mapCancelled)
     {
-        var (state, value, error) = result;
+        var (_, state, value, error) = result;
 
         var mappedResult = state switch
         {
-            ResultState.Success => mapValue(value),
+            ResultState.Success => mapValue(value.NotNull("value")),
             ResultState.Error => mapError(error.NotNull("error")),
             ResultState.Cancelled => mapCancelled(),
             _ => throw GetUnknownState(state)
@@ -36,11 +36,7 @@ public static class ResultExtensions
         return mappedResult;
     }
 
-    public static void Match<TValue>(
-        this Result<TValue> result,
-        Action<TValue?> onValue,
-        Action<Exception> onError,
-        Action onCancelled)
+    public static void Match<TRequest, TResult>(this Result<TRequest, TResult> result, Action<TResult> onValue, Action<Exception> onError, Action onCancelled)
     {
         result.Match(onValue.ToFunc(), onError.ToFunc(), onCancelled.ToFunc());
     }

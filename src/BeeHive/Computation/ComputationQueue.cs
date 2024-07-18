@@ -3,55 +3,35 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace BeeHive;
 
-internal class ComputationQueue
-{
-    private readonly SemaphoreSlim _semaphore = new(0);
-    
+internal class ComputationQueue : LiteBlockingCollection<Action>
+{    
     private readonly ConcurrentQueue<Action> _computationQueue = new();
     private readonly ConcurrentQueue<Action> _continuationQueue = new();
 
-    private readonly int _threadIdleBeforeStop;
-
-    public ComputationQueue(int threadIdleBeforeStop)
-    {
-        _threadIdleBeforeStop = threadIdleBeforeStop;
-    }
-
     public event Action? Enqueueing;
 
-    public int Count => _computationQueue.Count + _continuationQueue.Count;
+    public override int Count => _computationQueue.Count + _continuationQueue.Count;
 
-    public void EnqueueComputation(Action compute)
+    public void EnqueueComputation(Action compute) => EnqueueCore(_computationQueue, compute);
+
+    public void EnqueueContinuation(Action continuation) => EnqueueCore(_continuationQueue, continuation);
+
+    private void EnqueueCore(ConcurrentQueue<Action> queue, Action item)
     {
         Enqueueing?.Invoke();
+        queue.Enqueue(item);
         
-        _computationQueue.Enqueue(compute);
-        _semaphore.Release();
+        SignalNewAdded();
     }
 
-    public void EnqueueContinuation(Action continuation)
+    public override IEnumerator<Action> GetEnumerator() => new AggregativeEnumerator<Action>(
+        _computationQueue.GetEnumerator(),
+        _continuationQueue.GetEnumerator());
+
+    protected override bool TryTake([MaybeNullWhen(false)] out Action action)
     {
-        _continuationQueue.Enqueue(continuation);
-        _semaphore.Release();
-    }
-
-    public bool TryDequeueOrWait(Func<bool> canFinish, CancellationToken cancellationToken, [MaybeNullWhen(false)] out Action next)
-    {
-        if (TryDequeue(out next))
-            return true;
-
-        while (true)
-        {
-            if (!WaitForNext(cancellationToken) && canFinish())
-                return false;
-
-            if (TryDequeue(out next))
-                return true;
-        }
-    }
-
-    private bool TryDequeue([MaybeNullWhen(false)] out Action action)
-    {
+        action = null;
+        
         if (_continuationQueue.TryDequeue(out var nextContinuation))
         {
             action = nextContinuation;
@@ -64,19 +44,6 @@ internal class ComputationQueue
             return true;
         }
 
-        action = null;
         return false;
-    }
-
-    private bool WaitForNext(CancellationToken cancellationToken)
-    {
-        try
-        {
-            return _semaphore.Wait(_threadIdleBeforeStop, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            return false;
-        }
     }
 }

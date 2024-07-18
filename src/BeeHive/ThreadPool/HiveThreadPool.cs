@@ -7,6 +7,7 @@ internal class HiveThreadPool : IDisposable
 
     private readonly int _minLiveThreads;
     private readonly int _maxLiveThreads;
+    private readonly int _threadIdleBeforeStopMilliseconds;
     
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     
@@ -17,6 +18,7 @@ internal class HiveThreadPool : IDisposable
     {
         _minLiveThreads = configuration.MinLiveThreads;
         _maxLiveThreads = Math.Max(_minLiveThreads, configuration.MaxLiveThreads);
+        _threadIdleBeforeStopMilliseconds = configuration.ThreadIdleBeforeStopMilliseconds;
 
         ComputationQueue = computationQueue;
         ComputationQueue.Enqueueing += OnComputationEnqueueing;
@@ -102,7 +104,7 @@ internal class HiveThreadPool : IDisposable
     private void StartNewThread()
     {
         var cancellationToken = _cancellationTokenSource.Token;
-        var newThread = new HiveThread(this, cancellationToken).Run();
+        var newThread = new HiveThread(this, _threadIdleBeforeStopMilliseconds, cancellationToken).Run();
 
         _threads.Add(newThread);
     }
