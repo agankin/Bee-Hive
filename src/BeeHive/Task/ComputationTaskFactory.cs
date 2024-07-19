@@ -1,17 +1,17 @@
 namespace BeeHive;
 
-internal class HiveComputationFactory<TRequest, TResult>
+internal class ComputationFactory<TRequest, TResult>
 {
     private readonly Compute<TRequest, TResult> _compute;
     private readonly Action<Computation<TRequest, TResult>> _onCompleted;
 
-    internal HiveComputationFactory(Compute<TRequest, TResult> compute, Action<Computation<TRequest, TResult>> onCompleted)
+    internal ComputationFactory(Compute<TRequest, TResult> compute, Action<Computation<TRequest, TResult>> onCompleted)
     {
         _compute = compute;
         _onCompleted = onCompleted;
     }
 
-    internal HiveComputationTask<TRequest, TResult> Create(TRequest request)
+    internal ComputationTask<TRequest, TResult> Create(TRequest request)
     {
         var taskCompletionSource = new TaskCompletionSource<Result<TRequest, TResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
         var task = taskCompletionSource.Task;

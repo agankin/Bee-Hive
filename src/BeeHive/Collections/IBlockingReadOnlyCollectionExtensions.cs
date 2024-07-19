@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace BeeHive;
 
-public static class BlockingReadOnlyCollectionExtensions
+public static class IBlockingReadOnlyCollectionExtensions
 {
     private const int Infinite = -1;
 
