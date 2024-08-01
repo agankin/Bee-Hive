@@ -5,7 +5,7 @@ namespace BeeHive;
 
 internal abstract class LiteBlockingCollection<TItem> : IBlockingReadOnlyCollection<TItem>
 {
-    private readonly SemaphoreSlim _semaphore = new(0);
+    private readonly LiteSemaphore _semaphore = new();
 
     public abstract int Count { get; }
 
