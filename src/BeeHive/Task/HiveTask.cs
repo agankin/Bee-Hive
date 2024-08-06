@@ -4,22 +4,32 @@ namespace BeeHive;
 
 public class HiveTask<TRequest, TResult>
 {
+    private readonly TaskCompletionSource<TResult> _taskCompletionSource;
     private readonly CancellationTokenSource _cancellationTokenSource;
 
-    public HiveTask(TRequest request, Task<Result<TRequest, TResult>> task, CancellationTokenSource cancellationTokenSource)
+    public HiveTask(TRequest request, TaskCompletionSource<TResult> taskCompletionSource, CancellationTokenSource cancellationTokenSource)
     {
         Request = request;
-        Task = task;
+        _taskCompletionSource = taskCompletionSource;
         _cancellationTokenSource = cancellationTokenSource;
     }
 
     public TRequest Request { get; }
 
-    public Task<Result<TRequest, TResult>> Task { get; }
+    public Task<TResult> Task => _taskCompletionSource.Task;
 
-    public TaskAwaiter<Result<TRequest, TResult>> GetAwaiter() => Task.GetAwaiter();
+    public TaskAwaiter<TResult> GetAwaiter() => Task.GetAwaiter();
 
     public void Cancel() => _cancellationTokenSource.Cancel();
 
-    public static implicit operator Task<Result<TRequest, TResult>>(HiveTask<TRequest, TResult> hiveTask) => hiveTask.Task;
+    public static implicit operator Task<TResult>(HiveTask<TRequest, TResult> hiveTask) => hiveTask._taskCompletionSource.Task;
+
+    internal void Complete(Result<TRequest, TResult> result)
+    {
+        result.Match(
+            _taskCompletionSource.SetResult,
+            _taskCompletionSource.SetException,
+            _taskCompletionSource.SetCanceled
+        );
+    }
 }

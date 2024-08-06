@@ -1,11 +1,11 @@
 namespace BeeHive;
 
-internal class ComputationFactory<TRequest, TResult>
+internal class ComputationTaskFactory<TRequest, TResult>
 {
     private readonly Compute<TRequest, TResult> _compute;
-    private readonly Action<Computation<TRequest, TResult>> _onCompleted;
+    private readonly OnTaskCompleted<TRequest, TResult> _onCompleted;
 
-    internal ComputationFactory(Compute<TRequest, TResult> compute, Action<Computation<TRequest, TResult>> onCompleted)
+    internal ComputationTaskFactory(Compute<TRequest, TResult> compute, OnTaskCompleted<TRequest, TResult> onCompleted)
     {
         _compute = compute;
         _onCompleted = onCompleted;
@@ -13,29 +13,24 @@ internal class ComputationFactory<TRequest, TResult>
 
     internal ComputationTask<TRequest, TResult> Create(TRequest request)
     {
-        var taskCompletionSource = new TaskCompletionSource<Result<TRequest, TResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskCompletionSource = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var task = taskCompletionSource.Task;
         var cancellationTokenSource = new CancellationTokenSource();
         
-        var computation = new Computation<TRequest, TResult>(
-            request,
-            self => Compute(self, cancellationTokenSource.Token, taskCompletionSource),
-            task);
-        var hiveTask = new HiveTask<TRequest, TResult>(request, task, cancellationTokenSource);
+        var hiveTask = new HiveTask<TRequest, TResult>(request, taskCompletionSource, cancellationTokenSource);
+        var computation = () => Compute(hiveTask, cancellationTokenSource.Token);      
         
         return new(computation, hiveTask);
     }
 
-    private void Compute(
-        Computation<TRequest, TResult> computation,
-        CancellationToken cancellationToken,
-        TaskCompletionSource<Result<TRequest, TResult>> taskCompletionSource)
+    private void Compute(HiveTask<TRequest, TResult> task, CancellationToken cancellationToken)
     {
-        var request = computation.Request;
+        var request = task.Request;
+
         if (cancellationToken.IsCancellationRequested)
         {
             var result = Result<TRequest, TResult>.Cancelled(request);
-            OnCompleted(computation, result, taskCompletionSource);
+            OnCompleted(task, result);
             return;
         }
 
@@ -47,29 +42,24 @@ internal class ComputationFactory<TRequest, TResult>
                 var result = cancellationToken.IsCancellationRequested
                     ? Result<TRequest, TResult>.Cancelled(request)
                     : Result<TRequest, TResult>.FromValue(request, awaiter.GetResult());
-                OnCompleted(computation, result, taskCompletionSource);
+                OnCompleted(task, result);
             }
             catch (OperationCanceledException)
             {
                 var cancelledResult = Result<TRequest, TResult>.Cancelled(request);
-                OnCompleted(computation, cancelledResult, taskCompletionSource);
+                OnCompleted(task, cancelledResult);
             }
             catch (Exception ex)
             {
                 var errorResult = Result<TRequest, TResult>.FromError(request, ex);
-                OnCompleted(computation, errorResult, taskCompletionSource);
+                OnCompleted(task, errorResult);
             }
         });
     }
 
-    private void OnCompleted(
-        Computation<TRequest, TResult> computation,
-        Result<TRequest, TResult> result,
-        TaskCompletionSource<Result<TRequest, TResult>> taskCompletionSource)
+    private void OnCompleted(HiveTask<TRequest, TResult> task, Result<TRequest, TResult> result)
     {
-        computation.SetCompleted(result);  
-
-        _onCompleted(computation);
-        taskCompletionSource.SetResult(result);
+        task.Complete(result);
+        _onCompleted(task, result);
     }
 }

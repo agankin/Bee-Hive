@@ -18,11 +18,11 @@ IEnumerable<Task> QueueComputations(HiveQueue<int, int> computeQueue)
 {
     for (var i = 0; i < 6; i++)
         yield return computeQueue.Compute(i).Task
-            .ContinueWith(task => task.Result.Map(value => 
+            .ContinueWith(task => 
             {
-                Log($"Result: {value}");
+                Log($"Result: {task.Result}");
                 return 0;
-            }));
+            });
 }
 
 async ValueTask<int> Square(int number)
