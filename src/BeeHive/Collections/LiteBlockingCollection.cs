@@ -9,6 +9,8 @@ internal abstract class LiteBlockingCollection<TItem> : IBlockingReadOnlyCollect
 
     public abstract int Count { get; }
 
+    public abstract bool TryTake([MaybeNullWhen(false)] out TItem item);
+    
     public bool TryTakeOrWait(int waitMilliseconds, CancellationToken cancellationToken, [MaybeNullWhen(false)] out TItem item)
     {
         item = default;
@@ -20,8 +22,6 @@ internal abstract class LiteBlockingCollection<TItem> : IBlockingReadOnlyCollect
     }
 
     protected void SignalNewAdded() => _semaphore.Release();
-
-    protected abstract bool TryTake([MaybeNullWhen(false)] out TItem item);
 
     private bool WaitForNext(int waitMilliseconds, CancellationToken cancellationToken)
     {

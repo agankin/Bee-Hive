@@ -54,7 +54,7 @@ public class Benchmarks
 
         for (var runIdx = 0; runIdx < ComputeRunCount; runIdx++)
         {
-            computeQueue.Compute(Unit.Value);
+            computeQueue.EnqueueCompute(Unit.Value);
         }
 
         var resultCount = 0;

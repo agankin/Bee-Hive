@@ -8,7 +8,7 @@ internal class HiveThread
     private readonly int _idleBeforeStopMilliseconds;
     private readonly CancellationToken _poolCancellationToken;
 
-    private int _isRunning;
+    private volatile int _isRunning;
     private volatile bool _isBusy;
 
     public HiveThread(HiveThreadPool threadPool, int idleBeforeStopMilliseconds, CancellationToken poolCancellationToken)
@@ -18,6 +18,8 @@ internal class HiveThread
         _poolCancellationToken = poolCancellationToken;
     }
 
+    public bool IsRunning => _isRunning > 0;
+
     public bool IsBusy => _isBusy;
 
     public HiveThread Run()
@@ -26,7 +28,11 @@ internal class HiveThread
         if (isRunning == 1)
             throw new InvalidOperationException("Hive Thread is already in running state.");
 
-        Task.Factory.StartNew(QueueHandler, TaskCreationOptions.LongRunning);
+        var thread = new Thread(QueueHandler)
+        {
+            IsBackground = true
+        };
+        thread.Start();
 
         return this;
     }
@@ -34,7 +40,7 @@ internal class HiveThread
     private void QueueHandler()
     {
         LogDebug("Hive thread started.");
-        InitializeSynchronizationContext();
+        SetSynchronizationContext();
 
         while (true)
         {
@@ -44,15 +50,15 @@ internal class HiveThread
             var hasNext = _threadPool.ComputationQueue.TryTakeOrWait(_idleBeforeStopMilliseconds, _poolCancellationToken, out var next);
             if (hasNext)
             {
-                LogDebug("Invoking computation...");
                 Compute(next);
             }
-            else if(RequestFinishing())
+            else if (RequestFinishing())
             {
                 break;
             }
         }
 
+        _isRunning = 0;
         LogDebug("Hive thread stopped.");
     }
 
@@ -70,7 +76,7 @@ internal class HiveThread
         }
     }
 
-    private void InitializeSynchronizationContext()
+    private void SetSynchronizationContext()
     {
         var ctx = new HiveSynchronizationContext(_threadPool.ComputationQueue);
         SynchronizationContext.SetSynchronizationContext(ctx);

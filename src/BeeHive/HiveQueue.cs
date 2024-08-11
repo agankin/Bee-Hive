@@ -16,9 +16,11 @@ public class HiveQueue<TRequest, TResult> : IEnumerable<HiveTask<TRequest, TResu
         _computationTaskFactory = new ComputationTaskFactory<TRequest, TResult>(compute, OnTaskCompleted);
     }
 
-    public HiveTask<TRequest, TResult> Compute(TRequest request)
+    public HiveTask<TRequest, TResult> EnqueueCompute(TRequest request)
     {
         var (computation, task) = _computationTaskFactory.Create(request);
+
+        _queuedTasks.Add(task);
         _poolComputationQueue.EnqueueComputation(computation);
 
         return task;

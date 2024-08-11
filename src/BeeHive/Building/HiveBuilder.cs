@@ -6,8 +6,8 @@ public class HiveBuilder
 
     public HiveBuilder WithMinLiveThreads(int minLiveThreads)
     {
-        if (minLiveThreads < 1)
-            throw new ArgumentException("Minimal threads count cannot be less 1.", nameof(minLiveThreads));
+        if (minLiveThreads < 0)
+            throw new ArgumentException("Minimal threads count cannot be less zero.", nameof(minLiveThreads));
 
         _configuration = _configuration with { MinLiveThreads = minLiveThreads };
         return this;

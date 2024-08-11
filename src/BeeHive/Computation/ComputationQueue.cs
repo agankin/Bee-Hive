@@ -12,15 +12,17 @@ internal class ComputationQueue : LiteBlockingCollection<Action>
 
     public override int Count => _computationQueue.Count + _continuationQueue.Count;
 
-    public void EnqueueComputation(Action compute) => EnqueueCore(_computationQueue, compute);
-
-    public void EnqueueContinuation(Action continuation) => EnqueueCore(_continuationQueue, continuation);
-
-    private void EnqueueCore(ConcurrentQueue<Action> queue, Action item)
+    public void EnqueueComputation(Action compute)
     {
+        _computationQueue.Enqueue(compute);
         Enqueueing?.Invoke();
-        queue.Enqueue(item);
         
+        SignalNewAdded();
+    }
+
+    public void EnqueueContinuation(Action continuation)
+    {
+        _continuationQueue.Enqueue(continuation);
         SignalNewAdded();
     }
 
@@ -28,7 +30,7 @@ internal class ComputationQueue : LiteBlockingCollection<Action>
         _computationQueue.GetEnumerator(),
         _continuationQueue.GetEnumerator());
 
-    protected override bool TryTake([MaybeNullWhen(false)] out Action action)
+    public override bool TryTake([MaybeNullWhen(false)] out Action action)
     {
         action = null;
         

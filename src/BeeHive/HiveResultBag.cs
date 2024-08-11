@@ -15,7 +15,7 @@ internal class HiveResultBag<TRequest, TResult> : LiteBlockingCollection<Result<
         SignalNewAdded();
     }
 
-    public override IEnumerator<Result<TRequest, TResult>> GetEnumerator() => _resultBag.GetEnumerator();
+    public override bool TryTake([MaybeNullWhen(false)] out Result<TRequest, TResult> item) => _resultBag.TryTake(out item);
 
-    protected override bool TryTake([MaybeNullWhen(false)] out Result<TRequest, TResult> item) => _resultBag.TryTake(out item);
+    public override IEnumerator<Result<TRequest, TResult>> GetEnumerator() => _resultBag.GetEnumerator();
 }

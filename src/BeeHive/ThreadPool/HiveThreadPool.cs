@@ -2,14 +2,14 @@
 
 internal class HiveThreadPool : IDisposable
 {
-    private readonly object _threadsSyncObject = new();
     private readonly ConcurrentSet<HiveThread> _threads = new();
 
     private readonly int _minLiveThreads;
     private readonly int _maxLiveThreads;
     private readonly int _threadIdleBeforeStopMilliseconds;
     
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly CancellationTokenSource _poolCancellationTokenSource;
+    private readonly CancellationToken _poolCancellationToken;
     
     private volatile int _state = (int)PoolState.Created;
     private volatile int _threadsCount;
@@ -19,6 +19,9 @@ internal class HiveThreadPool : IDisposable
         _minLiveThreads = configuration.MinLiveThreads;
         _maxLiveThreads = Math.Max(_minLiveThreads, configuration.MaxLiveThreads);
         _threadIdleBeforeStopMilliseconds = configuration.ThreadIdleBeforeStopMilliseconds;
+
+        _poolCancellationTokenSource = new();
+        _poolCancellationToken = _poolCancellationTokenSource.Token;
 
         ComputationQueue = computationQueue;
         ComputationQueue.Enqueueing += OnComputationEnqueueing;
@@ -46,8 +49,8 @@ internal class HiveThreadPool : IDisposable
 
         ComputationQueue.Enqueueing -= OnComputationEnqueueing;
 
-        _cancellationTokenSource.Cancel();
-        _cancellationTokenSource.Dispose();
+        _poolCancellationTokenSource.Cancel();
+        _poolCancellationTokenSource.Dispose();
     }
 
     internal bool RequestFinishingThread(HiveThread thread)
@@ -70,14 +73,20 @@ internal class HiveThreadPool : IDisposable
 
     private void StartMinLiveThreads()
     {
-        lock (_threadsSyncObject)
+        var threadsCount = _threadsCount;
+        while (threadsCount < _minLiveThreads)
         {
-            while (_threadsCount < _minLiveThreads)
-            {
-                _threadsCount++;
+            if (Interlocked.CompareExchange(ref _threadsCount, threadsCount + 1, threadsCount) == threadsCount)
                 StartNewThread();
-            }
+                
+            threadsCount = _threadsCount;
         }
+    }
+
+    private void StartNewThread()
+    {
+        var newThread = new HiveThread(this, _threadIdleBeforeStopMilliseconds, _poolCancellationToken).Run();
+        _threads.Add(newThread);
     }
 
     private bool RequestStartingNewThread()
@@ -85,28 +94,24 @@ internal class HiveThreadPool : IDisposable
         if (IsDisposed())
             return false;
 
-        lock (_threadsSyncObject)
+        if (_threadsCount >= _maxLiveThreads)
+            return false;
+
+        var threadsCount = _threadsCount;
+        while (true)
         {
-            if (_threadsCount >= _maxLiveThreads)
+            var busyThreadsCount = _threads.Count(thread => thread.IsBusy);
+            var freeThreadsCount = threadsCount - busyThreadsCount;
+
+            var newThreadRequired = ComputationQueue.Count > freeThreadsCount;
+            if (!newThreadRequired)
                 return false;
 
-            var busyThreadsCount = _threads.Count(thread => thread.IsBusy);
-            var freeThreadsCount = _threadsCount - busyThreadsCount;
+            if (Interlocked.CompareExchange(ref _threadsCount, threadsCount + 1, threadsCount) == threadsCount)
+                return true;
 
-            var mustStart = ComputationQueue.Count + 1 > freeThreadsCount;
-            if (mustStart)
-                _threadsCount++;
-
-            return mustStart;
+            threadsCount = _threadsCount;
         }
-    }
-
-    private void StartNewThread()
-    {
-        var cancellationToken = _cancellationTokenSource.Token;
-        var newThread = new HiveThread(this, _threadIdleBeforeStopMilliseconds, cancellationToken).Run();
-
-        _threads.Add(newThread);
     }
 
     private bool RequestFinishingThread()
@@ -114,13 +119,17 @@ internal class HiveThreadPool : IDisposable
         if (IsDisposed())
             return true;
 
-        lock (_threadsSyncObject)
+        var threadsCount = _threadsCount;
+        while (true)
         {
-            var canFinish = _threadsCount > _minLiveThreads;
-            if (canFinish)
-                _threadsCount--;
+            var threadFinishingRequired = threadsCount > _minLiveThreads;
+            if (!threadFinishingRequired)
+                return false;
             
-            return canFinish;
+            if (Interlocked.CompareExchange(ref _threadsCount, threadsCount - 1, threadsCount) == threadsCount)
+                return true;
+
+            threadsCount = _threadsCount;
         }
     }
 
