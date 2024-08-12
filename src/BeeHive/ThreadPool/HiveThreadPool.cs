@@ -1,6 +1,6 @@
 ﻿namespace BeeHive;
 
-internal class HiveThreadPool : IDisposable
+internal class HiveThreadPool : IDisposable, IAsyncDisposable
 {
     private readonly ConcurrentSet<HiveThread> _threads = new();
 
@@ -10,6 +10,8 @@ internal class HiveThreadPool : IDisposable
     
     private readonly CancellationTokenSource _poolCancellationTokenSource;
     private readonly CancellationToken _poolCancellationToken;
+
+    private readonly TaskCompletionSource<Nothing> _disposedTaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     
     private volatile int _state = (int)PoolState.Created;
     private volatile int _threadsCount;
@@ -29,6 +31,8 @@ internal class HiveThreadPool : IDisposable
 
     internal ComputationQueue ComputationQueue { get; }
 
+    internal CancellationToken CancellationToken => _poolCancellationToken;
+
     public HiveThreadPool Run()
     {
         var oldState = Interlocked.CompareExchange(ref _state, (int)PoolState.Running, (int)PoolState.Created);
@@ -41,23 +45,24 @@ internal class HiveThreadPool : IDisposable
         return this;
     }
 
-    public void Dispose()
+    public void Dispose() => TryDispose();
+
+    public ValueTask DisposeAsync()
     {
-        var oldState = Interlocked.Exchange(ref _state, (int)PoolState.Disposed);
-        if (oldState == (int)PoolState.Disposed)
-            return;
+        if (TryDispose() && _threads.Count == 0)
+            _disposedTaskCompletionSource.TrySetResult(new());
 
-        ComputationQueue.Enqueueing -= OnComputationEnqueueing;
-
-        _poolCancellationTokenSource.Cancel();
-        _poolCancellationTokenSource.Dispose();
+        return new ValueTask(_disposedTaskCompletionSource.Task);
     }
 
     internal bool RequestFinishingThread(HiveThread thread)
     {
         var finished = RequestFinishingThread();
         if (finished)
+        {
+            thread.ThreadStopped -= OnThreadStopped;
             _threads.Remove(thread);
+        }
 
         return finished;
     }
@@ -86,6 +91,8 @@ internal class HiveThreadPool : IDisposable
     private void StartNewThread()
     {
         var newThread = new HiveThread(this, _threadIdleBeforeStopMilliseconds, _poolCancellationToken).Run();
+        newThread.ThreadStopped += OnThreadStopped;
+        
         _threads.Add(newThread);
     }
 
@@ -133,7 +140,33 @@ internal class HiveThreadPool : IDisposable
         }
     }
 
+    private bool TryDispose()
+    {
+        var oldState = Interlocked.Exchange(ref _state, (int)PoolState.Disposed);
+        if (oldState == (int)PoolState.Disposed)
+            return false;
+
+        ComputationQueue.Enqueueing -= OnComputationEnqueueing;
+
+        _poolCancellationTokenSource.Cancel();
+        _poolCancellationTokenSource.Dispose();
+
+        return true;
+    }
+
     private bool IsDisposed() => _state == (int)PoolState.Disposed;
+
+    private void OnThreadStopped(HiveThread thread)
+    {
+        if (!IsDisposed())
+            return;
+
+        thread.ThreadStopped -= OnThreadStopped;
+        _threads.Remove(thread);
+        
+        if (_threads.Count == 0)
+            _disposedTaskCompletionSource.TrySetResult(new());
+    }
 
     private enum PoolState
     {

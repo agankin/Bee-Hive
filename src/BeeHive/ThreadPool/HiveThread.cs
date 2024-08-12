@@ -18,6 +18,8 @@ internal class HiveThread
         _poolCancellationToken = poolCancellationToken;
     }
 
+    public event Action<HiveThread>? ThreadStopped;
+
     public bool IsRunning => _isRunning > 0;
 
     public bool IsBusy => _isBusy;
@@ -59,6 +61,8 @@ internal class HiveThread
         }
 
         _isRunning = 0;
+        ThreadStopped?.Invoke(this);
+        
         LogDebug("Hive thread stopped.");
     }
 

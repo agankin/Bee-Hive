@@ -1,6 +1,6 @@
 ﻿namespace BeeHive;
 
-public class Hive : IDisposable
+public class Hive : IDisposable, IAsyncDisposable
 {
     private readonly ComputationQueue _computationQueue;
     private readonly HiveThreadPool _threadPool;
@@ -18,7 +18,12 @@ public class Hive : IDisposable
     }
 
     public HiveQueue<TRequest, TResult> GetQueueFor<TRequest, TResult>(Compute<TRequest, TResult> compute) =>
-        new HiveQueue<TRequest, TResult>(_computationQueue, compute);
+        new HiveQueue<TRequest, TResult>(_computationQueue, compute, _threadPool.CancellationToken);
 
     public void Dispose() => _threadPool.Dispose();
+
+    public async ValueTask DisposeAsync()
+    {
+        await _threadPool.DisposeAsync();
+    }
 }

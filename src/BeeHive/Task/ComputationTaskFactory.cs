@@ -4,11 +4,16 @@ internal class ComputationTaskFactory<TRequest, TResult>
 {
     private readonly Compute<TRequest, TResult> _compute;
     private readonly OnTaskCompleted<TRequest, TResult> _onCompleted;
+    private readonly CancellationToken _poolCancellationToken;
 
-    internal ComputationTaskFactory(Compute<TRequest, TResult> compute, OnTaskCompleted<TRequest, TResult> onCompleted)
+    internal ComputationTaskFactory(
+        Compute<TRequest, TResult> compute,
+        OnTaskCompleted<TRequest, TResult> onCompleted,
+        CancellationToken poolCancellationToken)
     {
         _compute = compute;
         _onCompleted = onCompleted;
+        _poolCancellationToken = poolCancellationToken;
     }
 
     internal ComputationTask<TRequest, TResult> Create(TRequest request)
@@ -21,7 +26,13 @@ internal class ComputationTaskFactory<TRequest, TResult>
         var onCancelRequested = () => OnCancelRequested(hiveTask, cancellationTokenSource);
         hiveTask = new HiveTask<TRequest, TResult>(request, taskCompletionSource, onCancelRequested);
         
-        var computation = () => Compute(hiveTask, cancellationTokenSource.Token);      
+        var computation = () => 
+        {
+            using var aggregatedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, _poolCancellationToken);
+            
+            Compute(hiveTask, aggregatedCancellationTokenSource.Token);
+            cancellationTokenSource.Dispose();
+        };
         
         return new(computation, hiveTask);
     }
