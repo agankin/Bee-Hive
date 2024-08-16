@@ -13,15 +13,15 @@ public class HiveQueue<TRequest, TResult> : IEnumerable<HiveTask<TRequest, TResu
     internal HiveQueue(ComputationQueue poolComputationQueue, Compute<TRequest, TResult> compute, CancellationToken poolCancellationToken)
     {
         _poolComputationQueue = poolComputationQueue;
-        _computationTaskFactory = new ComputationTaskFactory<TRequest, TResult>(compute, OnTaskCompleted, poolCancellationToken);
+        _computationTaskFactory = new ComputationTaskFactory<TRequest, TResult>(compute, OnTaskCompleted, OnTaskCancelled, poolCancellationToken);
     }
 
     public HiveTask<TRequest, TResult> EnqueueCompute(TRequest request)
     {
-        var (computation, task) = _computationTaskFactory.Create(request);
+        var task = _computationTaskFactory.Create(request);
 
         _queuedTasks.Add(task);
-        _poolComputationQueue.EnqueueComputation(computation);
+        _poolComputationQueue.EnqueueComputation(task.Computation);
 
         return task;
     }
@@ -38,5 +38,11 @@ public class HiveQueue<TRequest, TResult> : IEnumerable<HiveTask<TRequest, TResu
 
         if (_resultBag.IsValueCreated)
             _resultBag.Value.Add(result);
+    }
+
+    private void OnTaskCancelled(HiveTask<TRequest, TResult> task)
+    {
+        _queuedTasks.Remove(task);
+        _poolComputationQueue.RemoveComputation(task.Computation);
     }
 }

@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
 namespace BeeHive;
@@ -44,4 +43,6 @@ internal class ComputationQueue : LiteBlockingCollection<Action>
 
         return false;
     }
+
+    public void RemoveComputation(Action computation) => _computationQueue.Remove(computation);
 }
