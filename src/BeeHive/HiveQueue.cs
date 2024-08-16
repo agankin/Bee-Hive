@@ -6,7 +6,6 @@ public class HiveQueue<TRequest, TResult> : IEnumerable<HiveTask<TRequest, TResu
 {
     private readonly ComputationQueue _poolComputationQueue;
     private readonly ComputationTaskFactory<TRequest, TResult> _computationTaskFactory;
-    private readonly CancellationToken _poolCancellationToken;
     
     private readonly ConcurrentSet<HiveTask<TRequest, TResult>> _queuedTasks = new();
     private readonly Lazy<HiveResultBag<TRequest, TResult>> _resultBag = new(() => new());
@@ -15,7 +14,6 @@ public class HiveQueue<TRequest, TResult> : IEnumerable<HiveTask<TRequest, TResu
     {
         _poolComputationQueue = poolComputationQueue;
         _computationTaskFactory = new ComputationTaskFactory<TRequest, TResult>(compute, OnTaskCompleted, poolCancellationToken);
-        _poolCancellationToken = poolCancellationToken;
     }
 
     public HiveTask<TRequest, TResult> EnqueueCompute(TRequest request)

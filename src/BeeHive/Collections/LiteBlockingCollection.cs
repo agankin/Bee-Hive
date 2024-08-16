@@ -34,8 +34,4 @@ internal abstract class LiteBlockingCollection<TItem> : IBlockingReadOnlyCollect
             return false;
         }
     }
-
-    public abstract IEnumerator<TItem> GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

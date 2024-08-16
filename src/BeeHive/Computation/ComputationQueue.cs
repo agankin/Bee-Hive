@@ -5,8 +5,8 @@ namespace BeeHive;
 
 internal class ComputationQueue : LiteBlockingCollection<Action>
 {    
-    private readonly ConcurrentQueue<Action> _computationQueue = new();
-    private readonly ConcurrentQueue<Action> _continuationQueue = new();
+    private readonly LiteConcurrentQueue<Action> _computationQueue = new();
+    private readonly LiteConcurrentQueue<Action> _continuationQueue = new();
 
     public event Action? Enqueueing;
 
@@ -25,10 +25,6 @@ internal class ComputationQueue : LiteBlockingCollection<Action>
         _continuationQueue.Enqueue(continuation);
         SignalNewAdded();
     }
-
-    public override IEnumerator<Action> GetEnumerator() => new AggregativeEnumerator<Action>(
-        _computationQueue.GetEnumerator(),
-        _continuationQueue.GetEnumerator());
 
     public override bool TryTake([MaybeNullWhen(false)] out Action action)
     {

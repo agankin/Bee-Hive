@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Collections;
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
 namespace BeeHive;
@@ -17,5 +18,7 @@ internal class HiveResultBag<TRequest, TResult> : LiteBlockingCollection<Result<
 
     public override bool TryTake([MaybeNullWhen(false)] out Result<TRequest, TResult> item) => _resultBag.TryTake(out item);
 
-    public override IEnumerator<Result<TRequest, TResult>> GetEnumerator() => _resultBag.GetEnumerator();
+    public IEnumerator<Result<TRequest, TResult>> GetEnumerator() => _resultBag.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
