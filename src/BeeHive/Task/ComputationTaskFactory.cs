@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace BeeHive;
 
@@ -25,43 +26,35 @@ internal class ComputationTaskFactory<TRequest, TResult>
     {
         var taskCompletionSource = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var task = taskCompletionSource.Task;
-        var cancellationTokenSource = new CancellationTokenSource();
+        var taskCancellationTokenSource = new TaskCancellationTokenSource(_poolCancellationToken);
 
         HiveTask<TRequest, TResult> hiveTask = null!;
-        
-        var onTaskCancelRequested = () => OnTaskCancelRequested(hiveTask, cancellationTokenSource);
-        var computation = () => 
-        {
-            var aggregatedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, _poolCancellationToken);
-            
-            Compute(hiveTask, aggregatedCancellationTokenSource.Token);
-            cancellationTokenSource.Dispose();
-        };
-        
-        hiveTask = new HiveTask<TRequest, TResult>(request, computation, taskCompletionSource, onTaskCancelRequested);
+        var computation = () => Compute(hiveTask, taskCancellationTokenSource);
+        hiveTask = new HiveTask<TRequest, TResult>(request, computation, taskCompletionSource, taskCancellationTokenSource, OnTaskCancelled);
         
         return hiveTask;
     }
 
-    private void Compute(HiveTask<TRequest, TResult> task, CancellationToken cancellationToken)
+    private void Compute(HiveTask<TRequest, TResult> task, TaskCancellationTokenSource taskCancellationTokenSource)
     {
         if (!task.TrySetInProgress())
             return;
-        
-        if (cancellationToken.IsCancellationRequested)
+
+        var taskCancellationToken = taskCancellationTokenSource.Token;
+        if (taskCancellationToken.IsCancellationRequested)
         {
             OnCancelled(task);
             return;
         }
 
-        var awaiter = ComputeCore(task.Request, cancellationToken).GetAwaiter();
+        var awaiter = ComputeCore(task.Request, taskCancellationToken).GetAwaiter();
         if (awaiter.IsCompleted)
         {
-            OnComputeCompleted(task, cancellationToken, awaiter);
+            OnComputeCompleted(task, taskCancellationTokenSource, awaiter);
         }
         else
         {
-            awaiter.OnCompleted(() => OnComputeCompleted(task, cancellationToken, awaiter));
+            awaiter.OnCompleted(() => OnComputeCompleted(task, taskCancellationTokenSource, awaiter));
         }
     }
 
@@ -83,9 +76,14 @@ internal class ComputationTaskFactory<TRequest, TResult>
         }
     }
 
-    private void OnComputeCompleted(HiveTask<TRequest, TResult> task, CancellationToken cancellationToken, ValueTaskAwaiter<TResult> awaiter)
+    private void OnComputeCompleted(
+        HiveTask<TRequest, TResult> task,
+        TaskCancellationTokenSource taskCancellationTokenSource,
+        ValueTaskAwaiter<TResult> awaiter)
     {
-        if (cancellationToken.IsCancellationRequested)
+        using var _ = taskCancellationTokenSource;
+
+        if (taskCancellationTokenSource.Token.IsCancellationRequested)
         {
             OnCancelled(task);
             return;
@@ -123,13 +121,8 @@ internal class ComputationTaskFactory<TRequest, TResult>
         OnCompleted(task, cancelledResult);
     }
 
-    private void OnTaskCancelRequested(HiveTask<TRequest, TResult> task, CancellationTokenSource cancellationTokenSource)
-    {
-        cancellationTokenSource.Cancel();
-        
-        if (!task.TrySetPendingCancelled())
-            return;
-
+    private void OnTaskCancelled(HiveTask<TRequest, TResult> task)
+    {        
         var cancelledResult = Result<TRequest, TResult>.Cancelled(task.Request);
         task.Complete(cancelledResult);
         _onCancelled(task);

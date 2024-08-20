@@ -14,7 +14,7 @@ public class LiteSpinLock
         }
         finally
         {
-            _locked = 0;
+            Volatile.Write(ref _locked, 0);
         }
     }
 

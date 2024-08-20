@@ -5,20 +5,24 @@ namespace BeeHive;
 public class HiveTask<TRequest, TResult>
 {
     private readonly TaskCompletionSource<TResult> _taskCompletionSource;
-    private readonly Action _onCancelRequested;
+    private readonly TaskCancellationTokenSource _taskCancellationTokenSource;
+    private readonly Action<HiveTask<TRequest, TResult>> _onCancelled;
 
     private volatile int _status = (int)HiveTaskStatus.Pending;
 
-    public HiveTask(
+    internal HiveTask(
         TRequest request,
         Action computation,
         TaskCompletionSource<TResult> taskCompletionSource,
-        Action onCancelRequested)
+        TaskCancellationTokenSource taskCancellationTokenSource,
+        Action<HiveTask<TRequest, TResult>> onCancelled)
     {
         Request = request;
         Computation = computation;
+
         _taskCompletionSource = taskCompletionSource;
-        _onCancelRequested = onCancelRequested;
+        _taskCancellationTokenSource = taskCancellationTokenSource;
+        _onCancelled = onCancelled;
     }
 
     public TRequest Request { get; }
@@ -31,7 +35,20 @@ public class HiveTask<TRequest, TResult>
 
     public TaskAwaiter<TResult> GetAwaiter() => Task.GetAwaiter();
 
-    public void Cancel() => _onCancelRequested();
+    public bool Cancel()
+    {
+        if (TrySetPendingCancelled())
+        {
+            _taskCancellationTokenSource.Cancel();
+            _onCancelled(this);
+        }
+        else if (TrySetInProgressCancelled())
+        {
+            _taskCancellationTokenSource.Cancel();
+        }
+
+        return Status == HiveTaskStatus.Cancelled;
+    }
 
     public static implicit operator Task<TResult>(HiveTask<TRequest, TResult> hiveTask) => hiveTask._taskCompletionSource.Task;
 
@@ -56,9 +73,15 @@ public class HiveTask<TRequest, TResult>
         return status == (int)HiveTaskStatus.Pending;
     }
 
-    internal bool TrySetPendingCancelled()
+    private bool TrySetPendingCancelled()
     {
         var status = Interlocked.CompareExchange(ref _status, (int)HiveTaskStatus.Cancelled, (int)HiveTaskStatus.Pending);
         return status == (int)HiveTaskStatus.Pending;
+    }
+
+    private bool TrySetInProgressCancelled()
+    {
+        var status = Interlocked.CompareExchange(ref _status, (int)HiveTaskStatus.Cancelled, (int)HiveTaskStatus.InProgress);
+        return status == (int)HiveTaskStatus.InProgress;
     }
 }

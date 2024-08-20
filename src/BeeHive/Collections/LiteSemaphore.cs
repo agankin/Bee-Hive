@@ -16,8 +16,6 @@ public class LiteSemaphore
     
     public bool Wait(CancellationToken cancellationToken)
     {
-        using var _ = cancellationToken.Register(OnCancellation);
-        
         lock (_syncObject)
         {
             if (_counter > 0)
@@ -26,6 +24,7 @@ public class LiteSemaphore
                 return true;
             }
 
+            using var _ = cancellationToken.Register(OnCancellation);
             while (true)
             {
                 if (cancellationToken.IsCancellationRequested)
