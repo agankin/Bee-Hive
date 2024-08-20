@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace BeeHive;
 
-public interface IBlockingReadOnlyCollection<TItem>
+public interface ILiteTakeableCollection<TItem>
 {
     public int Count { get; }
 

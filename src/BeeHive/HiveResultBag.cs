@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace BeeHive;
 
-internal class HiveResultBag<TRequest, TResult> : LiteBlockingCollection<Result<TRequest, TResult>>, IEnumerable<Result<TRequest, TResult>>
+internal class HiveResultBag<TRequest, TResult> : LiteTakeableCollection<Result<TRequest, TResult>>, IEnumerable<Result<TRequest, TResult>>
 {
     private readonly ConcurrentBag<Result<TRequest, TResult>> _resultBag = new();
 

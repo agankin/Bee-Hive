@@ -3,14 +3,14 @@ using System.Threading;
 
 namespace BeeHive;
 
-internal class ComputationTaskFactory<TRequest, TResult>
+internal class HiveTaskFactory<TRequest, TResult>
 {
     private readonly Compute<TRequest, TResult> _compute;
     private readonly OnTaskCompleted<TRequest, TResult> _onCompleted;
     private readonly OnTaskCancelled<TRequest, TResult> _onCancelled;
     private readonly CancellationToken _poolCancellationToken;
 
-    internal ComputationTaskFactory(
+    internal HiveTaskFactory(
         Compute<TRequest, TResult> compute,
         OnTaskCompleted<TRequest, TResult> onCompleted,
         OnTaskCancelled<TRequest, TResult> onCancelled,

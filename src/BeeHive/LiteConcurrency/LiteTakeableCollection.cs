@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace BeeHive;
 
-internal abstract class LiteBlockingCollection<TItem> : IBlockingReadOnlyCollection<TItem>
+internal abstract class LiteTakeableCollection<TItem> : ILiteTakeableCollection<TItem>
 {
     private readonly LiteSemaphore _semaphore = new();
 

@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace BeeHive;
 
-internal class ComputationQueue : LiteBlockingCollection<Action>
+internal class ComputationQueue : LiteTakeableCollection<Action>
 {    
     private readonly LiteConcurrentQueue<Action> _computationQueue = new();
     private readonly LiteConcurrentQueue<Action> _continuationQueue = new();
