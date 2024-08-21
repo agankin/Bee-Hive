@@ -2,10 +2,12 @@
 
 namespace BeeHive.Benchmarks;
 
+using static ComputationSamples;
+
 public class Benchmarks
 {
-    private const int ComputeRunCount = 100;
-    private const int ComputeSumOfNumbers = 1000000;
+    private const int Sum_Up_To_Count = 10_000;
+    private const long Expected_Tenfold_Total_After_Sum_Up = 500_050_000;
     private const int DegreeOfParallelism = 4;
 
     private Hive _hive = null!;
@@ -16,8 +18,11 @@ public class Benchmarks
         _hive = new HiveBuilder()
             .WithMinLiveThreads(DegreeOfParallelism)
             .WithMaxLiveThreads(DegreeOfParallelism)
-            .Build();
-        _hive.Run();
+            .Build()
+            .Run();
+
+        ThreadPool.SetMinThreads(DegreeOfParallelism, DegreeOfParallelism);
+        ThreadPool.SetMaxThreads(DegreeOfParallelism, DegreeOfParallelism);
     }
 
     [GlobalCleanup]
@@ -26,91 +31,59 @@ public class Benchmarks
         _hive.Dispose();
     }
 
-    [Benchmark]
-    public void SequentialComputation()
+    [Benchmark(Description = "Run sync tasks in Thread Pool")]
+    public void RunThreadPoolSyncTasks()
     {
-        for (var runIdx = 0; runIdx < ComputeRunCount; runIdx++)
-        {
-            var _ = Compute(Unit.Value);
-        }
+        var tasks = Enumerable.Range(0, Sum_Up_To_Count + 1)
+            .Select(value => Task.Run(() => TenfoldSync(value)))
+            .ToArray();
+        Task.WaitAll(tasks);
+        
+        AssertExpectedTenfoldSum(tasks);
     }
 
-    [Benchmark]
-    public void PLinqComputation()
+    [Benchmark(Description = "Run sync tasks in Hive")]
+    public void RunHiveSyncTasks()
     {
-        var results = Enumerable.Range(0, ComputeRunCount)
-            .AsParallel().WithDegreeOfParallelism(DegreeOfParallelism)
-            .Select(_ => Compute(Unit.Value));
-        foreach (var result in results)
-        {
-        }
+        var queue = _hive.GetQueueFor<long, long>(TenfoldSync);
+
+        var tasks = Enumerable.Range(0, Sum_Up_To_Count + 1)
+            .Select(value => queue.EnqueueCompute(value).Task)
+            .ToArray();
+        Task.WaitAll(tasks);
+        
+        AssertExpectedTenfoldSum(tasks);
     }
 
-    [Benchmark]
-    public void HiveComputation()
+    [Benchmark(Description = "Run async tasks in Thread Pool")]
+    public void RunThreadPoolAsyncTasks()
     {
-        var computeQueue = _hive.GetQueueFor<Unit, int>(Compute);
-        var resultBag = computeQueue.GetResultBag();
-
-        for (var runIdx = 0; runIdx < ComputeRunCount; runIdx++)
-        {
-            computeQueue.EnqueueCompute(Unit.Value);
-        }
-
-        var resultCount = 0;
-        while (resultBag.TryTakeOrWait(out var _))
-        {
-            if (++resultCount == ComputeRunCount)
-            {
-                return;
-            }
-        }
+        var tasks = Enumerable.Range(0, Sum_Up_To_Count + 1)
+            .Select(value => Task.Run(async () => await TenfoldAsync(value)))
+            .ToArray();
+        Task.WaitAll(tasks);
+        
+        AssertExpectedTenfoldSum(tasks);
     }
 
-    [Benchmark]
-    public void ThreadedComputation()
+    [Benchmark(Description = "Run async tasks in Hive")]
+    public void RunHiveAsyncTasks()
     {
-        var threads = new List<Thread>();
+        var queue = _hive.GetQueueFor<long, long>(TenfoldAsync);
 
-        Thread CreateComputationThread(int computeRunCount) => new(() => {
-                for (var runIdx = 0; runIdx < computeRunCount; runIdx++)
-                {
-                    var result = Compute(Unit.Value);
-                }
-            });
-
-        var computeRunCountPerThread = (int)Math.Ceiling(1.0 * ComputeRunCount / DegreeOfParallelism);
-        for (var parallelIdx = 0; parallelIdx < DegreeOfParallelism - 1; parallelIdx++)
-        {
-            var thread = CreateComputationThread(computeRunCountPerThread);
-            thread.Start();
-            
-            threads.Add(thread);
-        }
-
-        var runCountLeft = ComputeRunCount - computeRunCountPerThread * (DegreeOfParallelism - 1);
-        var lastThread = CreateComputationThread(runCountLeft);
-        lastThread.Start();
-
-        threads.Add(lastThread);
-
-        foreach (var thread in threads)
-            thread.Join();
+        var tasks = Enumerable.Range(0, Sum_Up_To_Count + 1)
+            .Select(value => queue.EnqueueCompute(value).Task)
+            .ToArray();
+        Task.WaitAll(tasks);
+        
+        AssertExpectedTenfoldSum(tasks);
     }
 
-    private static int Compute(Unit unit)
+    private static void AssertExpectedTenfoldSum(IEnumerable<Task<long>> tasks)
     {
-        var result = 0;
-        for (var number = 1; number <= ComputeSumOfNumbers; number++)
-        {
-            result += number;
-        }
+        var tenfoldSum = tasks.Select(task => task.Result).Sum();
 
-        return result;
-    }
-
-    private readonly struct Unit
-    {
-        public static readonly Unit Value = new();
+        if (tenfoldSum != Expected_Tenfold_Total_After_Sum_Up)
+            throw new Exception($"Expected tenfold sum is {Expected_Tenfold_Total_After_Sum_Up} but computed value is {tenfoldSum}.");
     }
 }

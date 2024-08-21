@@ -16,5 +16,10 @@ internal class HiveSynchronizationContext : SynchronizationContext
         _computationQueue.EnqueueContinuation(continuation);
     }
 
-    public override void Send(SendOrPostCallback d, object? state) => throw new NotSupportedException();
+    public override void Send(SendOrPostCallback d, object? state)
+    {
+        var continuation = () => d.Invoke(state);
+        
+        _computationQueue.EnqueueContinuation(continuation);
+    }
 }

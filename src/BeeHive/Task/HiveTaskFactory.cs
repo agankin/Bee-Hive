@@ -25,7 +25,6 @@ internal class HiveTaskFactory<TRequest, TResult>
     internal HiveTask<TRequest, TResult> Create(TRequest request)
     {
         var taskCompletionSource = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var task = taskCompletionSource.Task;
         var taskCancellationTokenSource = new TaskCancellationTokenSource(_poolCancellationToken);
 
         HiveTask<TRequest, TResult> hiveTask = null!;
