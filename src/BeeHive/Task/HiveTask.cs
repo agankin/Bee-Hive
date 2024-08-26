@@ -8,7 +8,7 @@ public class HiveTask<TRequest, TResult>
     private readonly TaskCancellationTokenSource _taskCancellationTokenSource;
     private readonly Action<HiveTask<TRequest, TResult>> _onCancelled;
 
-    private volatile int _status = (int)HiveTaskStatus.Pending;
+    private volatile int _state = (int)HiveTaskState.Pending;
 
     internal HiveTask(
         TRequest request,
@@ -27,7 +27,7 @@ public class HiveTask<TRequest, TResult>
 
     public TRequest Request { get; }
 
-    public HiveTaskStatus Status => (HiveTaskStatus)_status;
+    public HiveTaskState State => (HiveTaskState)_state;
 
     public Task<TResult> Task => _taskCompletionSource.Task;
 
@@ -47,17 +47,17 @@ public class HiveTask<TRequest, TResult>
             _taskCancellationTokenSource.Cancel();
         }
 
-        return Status == HiveTaskStatus.Cancelled;
+        return State == HiveTaskState.Cancelled;
     }
 
     public static implicit operator Task<TResult>(HiveTask<TRequest, TResult> hiveTask) => hiveTask._taskCompletionSource.Task;
 
     internal void Complete(Result<TRequest, TResult> result)
     {
-        _status = (int)result.Match(
-            _ => HiveTaskStatus.SuccessfullyCompleted,
-            _ => HiveTaskStatus.Error,
-            () => HiveTaskStatus.Cancelled
+        _state = (int)result.Match(
+            _ => HiveTaskState.SuccessfullyCompleted,
+            _ => HiveTaskState.Error,
+            () => HiveTaskState.Cancelled
         );
 
         result.Match(
@@ -69,19 +69,19 @@ public class HiveTask<TRequest, TResult>
     
     internal bool TrySetInProgress()
     {
-        var status = Interlocked.CompareExchange(ref _status, (int)HiveTaskStatus.InProgress, (int)HiveTaskStatus.Pending);
-        return status == (int)HiveTaskStatus.Pending;
+        var state = Interlocked.CompareExchange(ref _state, (int)HiveTaskState.InProgress, (int)HiveTaskState.Pending);
+        return state == (int)HiveTaskState.Pending;
     }
 
     private bool TrySetPendingCancelled()
     {
-        var status = Interlocked.CompareExchange(ref _status, (int)HiveTaskStatus.Cancelled, (int)HiveTaskStatus.Pending);
-        return status == (int)HiveTaskStatus.Pending;
+        var state = Interlocked.CompareExchange(ref _state, (int)HiveTaskState.Cancelled, (int)HiveTaskState.Pending);
+        return state == (int)HiveTaskState.Pending;
     }
 
     private bool TrySetInProgressCancelled()
     {
-        var status = Interlocked.CompareExchange(ref _status, (int)HiveTaskStatus.Cancelled, (int)HiveTaskStatus.InProgress);
-        return status == (int)HiveTaskStatus.InProgress;
+        var state = Interlocked.CompareExchange(ref _state, (int)HiveTaskState.Cancelled, (int)HiveTaskState.InProgress);
+        return state == (int)HiveTaskState.InProgress;
     }
 }

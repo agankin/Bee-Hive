@@ -97,7 +97,7 @@ internal class HiveTaskFactory<TRequest, TResult>
             
             OnCompleted(task, result);
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException)
         {
             OnCancelled(task);
         }

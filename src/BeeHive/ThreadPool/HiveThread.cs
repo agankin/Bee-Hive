@@ -1,7 +1,5 @@
 ﻿namespace BeeHive;
 
-using static DebugLogger;
-
 internal class HiveThread
 {    
     private readonly HiveThreadPool _threadPool;
@@ -41,7 +39,6 @@ internal class HiveThread
 
     private void QueueHandler()
     {
-        LogDebug("Hive thread started.");
         SetSynchronizationContext();
 
         while (true)
@@ -62,8 +59,6 @@ internal class HiveThread
 
         _isRunning = 0;
         ThreadStopped?.Invoke(this);
-        
-        LogDebug("Hive thread stopped.");
     }
 
     private void Compute(Action? compute)

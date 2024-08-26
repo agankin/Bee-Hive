@@ -8,7 +8,7 @@ public class HiveQueue<TRequest, TResult> : IEnumerable<HiveTask<TRequest, TResu
     private readonly HiveTaskFactory<TRequest, TResult> _hiveTaskFactory;
     
     private readonly ConcurrentSet<HiveTask<TRequest, TResult>> _queuedHiveTasks = new();
-    private readonly Lazy<HiveResultBag<TRequest, TResult>> _resultBag = new(() => new());
+    private readonly HiveResultBagCollection<TRequest, TResult> _resultBagCollection = new();
 
     internal HiveQueue(ComputationQueue poolComputationQueue, Compute<TRequest, TResult> compute, CancellationToken poolCancellationToken)
     {
@@ -26,7 +26,7 @@ public class HiveQueue<TRequest, TResult> : IEnumerable<HiveTask<TRequest, TResu
         return hiveTask;
     }
 
-    public ILiteTakeableCollection<Result<TRequest, TResult>> GetResultBag() => _resultBag.Value;
+    public IHiveResultBag<TRequest, TResult> CreateResultBag() => _resultBagCollection.AddNewBag();
 
     public IEnumerator<HiveTask<TRequest, TResult>> GetEnumerator() => _queuedHiveTasks.GetEnumerator();
 
@@ -35,9 +35,7 @@ public class HiveQueue<TRequest, TResult> : IEnumerable<HiveTask<TRequest, TResu
     private void OnTaskCompleted(HiveTask<TRequest, TResult> hiveTask, Result<TRequest, TResult> result)
     {
         _queuedHiveTasks.Remove(hiveTask);
-
-        if (_resultBag.IsValueCreated)
-            _resultBag.Value.Add(result);
+        _resultBagCollection.AddResult(result);
     }
 
     private void OnTaskCancelled(HiveTask<TRequest, TResult> hiveTask)

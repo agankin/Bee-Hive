@@ -1,6 +1,6 @@
 namespace BeeHive;
 
-public enum HiveTaskStatus
+public enum HiveTaskState
 {
     Pending,
 
