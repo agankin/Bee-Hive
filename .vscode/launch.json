@@ -17,7 +17,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build-debug",
-            "program": "${workspaceFolder}/samples/Playground/bin/Debug/net8.0/Playground.dll",
+            "program": "${workspaceFolder}/samples/BeeHive.Samples/bin/Debug/net8.0/BeeHive.Samples.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
             "console": "externalTerminal",

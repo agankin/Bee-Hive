@@ -5,6 +5,12 @@ public class LiteSemaphore
     private readonly object _syncObject = new object();
     private volatile int _counter;
 
+    public bool TryEnter()
+    {
+        lock (_syncObject)
+            return TryEnterCore();
+    }
+
     public bool Wait(int waitMilliseconds, CancellationToken cancellationToken)
     {
         using var timeoutTokenSource = new CancellationTokenSource(waitMilliseconds);
@@ -20,11 +26,8 @@ public class LiteSemaphore
         
         lock (_syncObject)
         {
-            if (_counter > 0)
-            {
-                _counter--;
+            if (TryEnterCore())
                 return true;
-            }
 
             while (true)
             {
@@ -33,11 +36,8 @@ public class LiteSemaphore
 
                 Monitor.Wait(_syncObject);
 
-                if (_counter > 0)
-                {
-                    _counter--;
+                if (TryEnterCore())
                     return true;
-                }
             }
         }
     }
@@ -49,6 +49,17 @@ public class LiteSemaphore
             _counter++;
             Monitor.Pulse(_syncObject);
         }
+    }
+
+    private bool TryEnterCore()
+    {
+        if (_counter > 0)
+        {
+            _counter--;
+            return true;
+        }
+
+        return false;
     }
 
     private void OnCancellation()

@@ -2,7 +2,7 @@ using System.Collections;
 
 namespace BeeHive;
 
-public class HiveQueue<TRequest, TResult> : IEnumerable<HiveTask<TRequest, TResult>>
+public class HiveQueue<TRequest, TResult> : IReadOnlyCollection<HiveTask<TRequest, TResult>>
 {
     private readonly ComputationQueue _poolComputationQueue;
     private readonly HiveTaskFactory<TRequest, TResult> _hiveTaskFactory;
@@ -15,6 +15,8 @@ public class HiveQueue<TRequest, TResult> : IEnumerable<HiveTask<TRequest, TResu
         _poolComputationQueue = poolComputationQueue;
         _hiveTaskFactory = new HiveTaskFactory<TRequest, TResult>(compute, OnTaskCompleted, OnTaskCancelled, poolCancellationToken);
     }
+
+    public int Count => _queuedHiveTasks.Count;
 
     public HiveTask<TRequest, TResult> EnqueueCompute(TRequest request)
     {

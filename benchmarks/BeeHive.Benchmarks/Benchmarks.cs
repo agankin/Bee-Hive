@@ -2,7 +2,7 @@
 
 namespace BeeHive.Benchmarks;
 
-using static ComputationSamples;
+using static ComputationFunctions;
 
 public class Benchmarks
 {

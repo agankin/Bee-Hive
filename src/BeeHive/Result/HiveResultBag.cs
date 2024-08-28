@@ -24,8 +24,6 @@ internal class HiveResultBag<TRequest, TResult> : LiteTakeableCollection<Result<
         SignalNewAdded();
     }
 
-    public override bool TryTake([MaybeNullWhen(false)] out Result<TRequest, TResult> item) => _resultBag.TryTake(out item);
-
     public IEnumerator<Result<TRequest, TResult>> GetEnumerator() => _resultBag.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -35,4 +33,6 @@ internal class HiveResultBag<TRequest, TResult> : LiteTakeableCollection<Result<
         if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 0)
             _onDisposed(this);
     }
+
+    protected override bool TryTakeCore([MaybeNullWhen(false)] out Result<TRequest, TResult> item) => _resultBag.TryTake(out item);
 }

@@ -25,7 +25,9 @@ internal class ComputationQueue : LiteTakeableCollection<Action>
         SignalNewAdded();
     }
 
-    public override bool TryTake([MaybeNullWhen(false)] out Action action)
+    public void RemoveComputation(Action computation) => _computationQueue.Remove(computation);
+
+    protected override bool TryTakeCore([MaybeNullWhen(false)] out Action action)
     {
         action = null;
         
@@ -43,6 +45,4 @@ internal class ComputationQueue : LiteTakeableCollection<Action>
 
         return false;
     }
-
-    public void RemoveComputation(Action computation) => _computationQueue.Remove(computation);
 }

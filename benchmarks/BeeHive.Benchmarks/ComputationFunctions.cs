@@ -1,6 +1,6 @@
 namespace BeeHive.Benchmarks;
 
-internal static class ComputationSamples
+internal static class ComputationFunctions
 {
     public static long TenfoldSync(long value)
     {

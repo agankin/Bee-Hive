@@ -8,7 +8,16 @@ internal abstract class LiteTakeableCollection<TItem> : ILiteTakeableCollection<
 
     public abstract int Count { get; }
 
-    public abstract bool TryTake([MaybeNullWhen(false)] out TItem item);
+    public bool TryTake([MaybeNullWhen(false)] out TItem item)
+    {
+        if (!_semaphore.TryEnter())
+        {
+            item = default;
+            return false;
+        }
+
+        return TryTakeCore(out item);
+    }
     
     public bool TryTakeOrWait(int waitMilliseconds, CancellationToken cancellationToken, [MaybeNullWhen(false)] out TItem item)
     {
@@ -17,8 +26,10 @@ internal abstract class LiteTakeableCollection<TItem> : ILiteTakeableCollection<
         if (!WaitForNext(waitMilliseconds, cancellationToken))
             return false;
 
-        return TryTake(out item);
+        return TryTakeCore(out item);
     }
+
+    protected abstract bool TryTakeCore([MaybeNullWhen(false)] out TItem item);
 
     protected void SignalNewAdded() => _semaphore.Release();
 

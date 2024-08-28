@@ -5,11 +5,11 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeeHive", "src\BeeHive\BeeHive.csproj", "{302C5017-31E2-4959-A0C6-7A66E5DF7841}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Playground", "samples\Playground\Playground.csproj", "{D901EEF4-07A0-4E32-AF2B-F3C6BF43FFF5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeeHive.Samples", "samples\BeeHive.Samples\BeeHive.Samples.csproj", "{D901EEF4-07A0-4E32-AF2B-F3C6BF43FFF5}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{B134529E-B401-4BA3-9F3B-A3C82CAFF5DF}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", "{B134529E-B401-4BA3-9F3B-A3C82CAFF5DF}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeeHive.Benchmarks", "tests\BeeHive.Benchmarks\BeeHive.Benchmarks.csproj", "{3E782EC7-4E3A-4892-834F-ECE48BF5D87F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeeHive.Benchmarks", "benchmarks\BeeHive.Benchmarks\BeeHive.Benchmarks.csproj", "{3E782EC7-4E3A-4892-834F-ECE48BF5D87F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{46E5100E-BBC7-4749-805A-FCA8B6A7AA9E}"
 EndProject
