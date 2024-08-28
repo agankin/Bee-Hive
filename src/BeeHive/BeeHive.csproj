@@ -5,6 +5,23 @@
 	  <LangVersion>latest</LangVersion>
 	  <ImplicitUsings>enable</ImplicitUsings>
 	  <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+    <PackageId>Bee-Hive</PackageId>
+    <PackageTags>Thread Pool, Multithreading</PackageTags>
+    <Authors>Andrei Gankin</Authors>
+    <RepositoryUrl>https://github.com/agankin/Bee-Hive</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/agankin/Bee-Hive</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Description>A library for creating a dedicated thread pool for parallel computations.</Description>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>

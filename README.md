@@ -1,5 +1,7 @@
 # Bee Hive
 
+![NuGet Version](https://img.shields.io/nuget/v/Bee-Hive)
+
 This is a library for creating a dedicated thread pool for parallel computations.
 
 It is useful for running long computations performing CPU intensive background tasks without a risk of thread pool starvation.
