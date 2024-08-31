@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace BeeHive;
 
-public class LiteConcurrentQueue<TItem> : IEnumerable<TItem>
+internal class LiteConcurrentQueue<TItem> : IEnumerable<TItem>
 {
     private readonly EqualityComparer<TItem> _itemComparer;
 

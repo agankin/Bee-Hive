@@ -1,6 +1,6 @@
 namespace BeeHive;
 
-public class LiteSemaphore
+internal class LiteSemaphore
 {
     private readonly object _syncObject = new object();
     private volatile int _counter;

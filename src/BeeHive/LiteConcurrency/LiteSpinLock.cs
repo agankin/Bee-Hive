@@ -1,6 +1,6 @@
 namespace BeeHive;
 
-public class LiteSpinLock
+internal class LiteSpinLock
 {
     private int _locked;
 

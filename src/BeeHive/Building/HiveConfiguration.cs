@@ -2,7 +2,7 @@
 
 internal record HiveConfiguration
 {
-    private const int Infinite = -1;
+    private const int InfiniteTime = -1;
 
     private HiveConfiguration() { }
 
@@ -10,7 +10,7 @@ internal record HiveConfiguration
     {
         MinLiveThreads = 1,
         MaxLiveThreads = 1,
-        ThreadIdleBeforeStopMilliseconds = Infinite
+        ThreadIdleBeforeStopMilliseconds = InfiniteTime
     };
 
     internal int MinLiveThreads { get; init; }

@@ -1,5 +1,8 @@
 ﻿namespace BeeHive;
 
+/// <summary>
+/// Represents a thread pool for computations parallelization.
+/// </summary>
 public class Hive : IDisposable, IAsyncDisposable
 {
     private readonly ComputationQueue _computationQueue;
@@ -11,19 +14,29 @@ public class Hive : IDisposable, IAsyncDisposable
         _threadPool = new HiveThreadPool(configuration, _computationQueue);
     }
 
+    /// <summary>
+    /// Runs the Hive.
+    /// </summary>
+    /// <returns>The current instance.</returns>
     public Hive Run()
     {
         _threadPool.Run();
         return this;
     }
 
+    /// <summary>
+    /// Creates a Hive queue.
+    /// </summary>
+    /// <param name="computationFunc">A computation delegate.</param>
+    /// <typeparam name="TRequest">The request type of the computation.</typeparam>
+    /// <typeparam name="TResult">The result type of the computation.</typeparam>
+    /// <returns>An instance of Hive queue.</returns>
     public HiveQueue<TRequest, TResult> GetQueueFor<TRequest, TResult>(Compute<TRequest, TResult> compute) =>
         new HiveQueue<TRequest, TResult>(_computationQueue, compute, _threadPool.CancellationToken);
 
+    /// <inheritdoc/>
     public void Dispose() => _threadPool.Dispose();
 
-    public async ValueTask DisposeAsync()
-    {
-        await _threadPool.DisposeAsync();
-    }
+    /// <inheritdoc/>
+    public async ValueTask DisposeAsync() => await _threadPool.DisposeAsync();
 }
