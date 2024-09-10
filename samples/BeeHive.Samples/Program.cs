@@ -1,13 +1,37 @@
-﻿using BeeHive.Samples;
+﻿using BeeHive;
+using static BeeHive.Samples.ComputationFunctions;
 
-Console.WriteLine("Running Hive Queues sample...");
-BeeHiveSamples.HiveQueuesSample();
+Hive hive = new HiveBuilder()
+    .WithMinLiveThreads(1)
+    .WithMaxLiveThreads(4)
+    .WithThreadIdleBeforeStop(milliseconds: 1000)
+    .Build();
 
-Console.WriteLine("Running Hive Tasks sample...");
-await BeeHiveSamples.HiveTasksSample();
+hive.Run();
 
-Console.WriteLine("Running Queue Result Bag sample...");
-await BeeHiveSamples.QueueResultBagSample();
+var isPrimeQueue = hive.GetQueueFor<string, bool>(IsPrimeNumber);
+using var isPrimeResults = isPrimeQueue.CreateResultBag();
 
-Console.Write("To exit press any key...");
+using var cts = new CancellationTokenSource();
+
+_ = isPrimeQueue.EnqueueCompute("1000000007");
+_ = isPrimeQueue.EnqueueCompute("1000000009");
+_ = isPrimeQueue.EnqueueCompute("1000000011");
+_ = isPrimeQueue.EnqueueCompute("1000000021");
+
+await isPrimeQueue.WhenAll();
+
+while (isPrimeResults.TryTake(out var result))
+{
+    var resultDescription = result.State switch
+    {
+        ResultState.Success => $"IsPrime(\"{result.Request}\") => {result.Value}",
+        ResultState.Error => $"IsPrime(\"{result.Request}\") => Error({result.Error?.Message})",
+        ResultState.Cancelled => $"IsPrime(\"{result.Request}\") => Cancelled",
+        _ => throw new Exception($"Unsupported {nameof(ResultState)} value: {result.State}.")
+    };
+
+    Console.WriteLine(resultDescription);
+}
+
 Console.ReadKey(true);

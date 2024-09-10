@@ -1,28 +1,51 @@
+using System.Numerics;
+using System.Text;
+
 namespace BeeHive.Samples;
 
 internal static class ComputationFunctions
 {
     /// <summary>
-    /// A sync function computing twice of integers.
-    /// The second param "cancellationToken" can be ommited if cancellation isn't supported.
+    /// A sync function determining if a number is prime.
+    /// Inefficient but good as an example of long running function.
     /// </summary>
-    public static int Twice(int value, CancellationToken cancellationToken)
+    public static bool IsPrimeNumber(string numberString, CancellationToken cancellationToken)
     {
-        // Simulates long work for 1 second.
-        for (var i = 0; i < 10; i++)
+        if (!BigInteger.TryParse(numberString, out var number))
+            throw new Exception("Number has wrong format.");
+
+        if (number < 0)
+            throw new Exception("Number must be greater than or equal to zero.");
+
+        if (number == 0 || number == 1)
+            return false;
+
+        if (number == 2)
+            return true;
+
+        if (number % 2 == 0)
+            return false;
+
+        var divisor = new BigInteger(3);
+        var halfNumber = number / 2;
+        
+        while (divisor <= halfNumber)
         {
-            Thread.Sleep(100);
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (number % divisor == 0)
+                return false;
+
+            divisor += 2;
         }
         
-        return value * 2;
+        return true;
     }
 
     /// <summary>
-    /// An async function computing integer square root.
-    /// The second param "cancellationToken" can be ommited if cancellation isn't supported. 
+    /// An async function computing square root of integer number.
     /// </summary>
-    public static async Task<int> SqrtAsync(int value, CancellationToken cancellationToken)
+    public static async Task<double> SqrtAsync(int value, CancellationToken cancellationToken)
     {
         // Simulates long work for 1 second.
         for (var i = 0; i < 10; i++)
@@ -34,9 +57,7 @@ internal static class ComputationFunctions
         if (value < 0)
             throw new Exception("Cannot calculate sqrt of negative value.");
 
-        var sqrtDouble = Math.Sqrt(value);
-        var sqrtInt = (int)Math.Round(sqrtDouble);
-        
-        return sqrtInt;
+        var result = Math.Sqrt(value);
+        return result;
     }
 }
