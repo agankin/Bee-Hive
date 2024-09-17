@@ -6,11 +6,14 @@ namespace BeeHive.Samples;
 internal static class ComputationFunctions
 {
     /// <summary>
-    /// A sync function determining if a number is prime.
-    /// Inefficient but good as an example of long running function.
+    /// A sync function determining if an arbitrarily large number in string is prime.
+    /// The implementation is inefficient but good as an example of a long running function.
     /// </summary>
     public static bool IsPrimeNumber(string numberString, CancellationToken cancellationToken)
     {
+        Thread.Sleep(100);
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!BigInteger.TryParse(numberString, out var number))
             throw new Exception("Number has wrong format.");
 
@@ -43,7 +46,7 @@ internal static class ComputationFunctions
     }
 
     /// <summary>
-    /// An async function computing square root of integer number.
+    /// An async function computing the square root of an integer number.
     /// </summary>
     public static async Task<double> SqrtAsync(int value, CancellationToken cancellationToken)
     {
