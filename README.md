@@ -131,6 +131,20 @@ HiveTask<string, bool> hiveTask = isPrimeQueue.EnqueueCompute("1000000007");
 bool isPrime = await hiveTask;
 ```
 
+An extension method exists for safely awaiting without exceptions thrown:
+
+```cs
+HiveTask<int, double> hiveTask = sqrtQueue.EnqueueCompute(-16);          // Unsupported square root of negative number.
+Result<int, double> result = await hiveTask.AsyncResult();
+
+// Matching possible states of the result: having a value of successfully completed computation, an error or cancelled.
+result.Match(
+    onValue: value => Console.WriteLine($"Value: {value}"),
+    onError: error => Console.WriteLine($"Error: {error}"),
+    onCancelled: () => Console.WriteLine($"Cancelled")
+);
+```
+
 Canonical Task&lt;TResult&gt; can be obtained via Task property or by implicit conversion:
 
 ```cs
@@ -140,7 +154,7 @@ Task<double> task = hiveTask.Task;
 Task<double> theSameTask = hiveTask;
 ```
 
-Hive Task has properties containing initial computation request and current state:
+Hive Task has properties containing initial computation request, current state and computed result:
 
 ```cs
 HiveTask<string, bool> hiveTask = isPrimeQueue.EnqueueCompute("1000000009");
@@ -149,6 +163,7 @@ await hiveTask;
 
 Debug.Assert(hiveTask.Request == "1000000009");                      // Request the computation was invoked for.
 Debug.Assert(hiveTask.State == HiveTaskState.SuccessfullyCompleted); // After awaiting state becomes SuccessfullyCompleted.
+Debug.Assert(hiveTask.Result?.Value == true);                        // After completion result contains computed value.
 ```
 
 #### Hive Tasks cancellation
@@ -178,13 +193,13 @@ HiveTask<int, double> hiveTask = sqrtQueue.EnqueueCompute(-16);     // Unsupport
 
 try
 {
-    await hiveTask;                                                        // Await for fail.
+    await hiveTask;                                                 // Await for fail.
 }
 catch (Exception ex)
 {
-    Console.WriteLine(ex.Message);                                         // Prints "Cannot calculate sqrt of negative value.".
+    Console.WriteLine(ex.Message);                                  // Prints "Cannot calculate sqrt of negative value.".
 }
-Debug.Assert(hiveTask.State == HiveTaskState.Error);                       // Now the task is in Error state.
+Debug.Assert(hiveTask.State == HiveTaskState.Error);                // Now the task is in Error state.
 ```
 
 ### Result Bags

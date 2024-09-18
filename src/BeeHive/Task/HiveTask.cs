@@ -13,6 +13,7 @@ public class HiveTask<TRequest, TResult>
     private readonly TaskCancellationTokenSource _taskCancellationTokenSource;
     private readonly Action<HiveTask<TRequest, TResult>> _onCancelled;
 
+    private volatile Result<TRequest, TResult>? _result;
     private volatile int _state = (int)HiveTaskState.Pending;
 
     internal HiveTask(
@@ -36,6 +37,14 @@ public class HiveTask<TRequest, TResult>
     public TRequest Request { get; }
 
     /// <summary>
+    /// A result of the task.
+    /// </summary>
+    /// <remarks>
+    /// Contains null until task completes/gets cancelled.
+    /// </remarks>
+    public Result<TRequest, TResult>? Result => _result;
+
+    /// <summary>
     /// The current state.
     /// </summary>
     public HiveTaskState State => (HiveTaskState)_state;
@@ -50,7 +59,7 @@ public class HiveTask<TRequest, TResult>
     /// <summary>
     /// Returns an awaiter used to await this Hive Task.
     /// </summary>
-    public TaskAwaiter<TResult> GetAwaiter() => Task.GetAwaiter();
+    public ConfiguredTaskAwaitable<TResult>.ConfiguredTaskAwaiter GetAwaiter() => Task.ConfigureAwait(false).GetAwaiter();
 
     /// <summary>
     /// Attempts to cancel this Hive task.
@@ -83,6 +92,7 @@ public class HiveTask<TRequest, TResult>
 
     internal void Complete(Result<TRequest, TResult> result)
     {
+        _result = result;
         _state = (int)result.Match(
             _ => HiveTaskState.SuccessfullyCompleted,
             _ => HiveTaskState.Error,
