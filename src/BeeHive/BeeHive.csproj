@@ -12,7 +12,7 @@
     <RepositoryUrl>https://github.com/agankin/Bee-Hive</RepositoryUrl>
     <PackageProjectUrl>https://github.com/agankin/Bee-Hive</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Description>A library for creating a dedicated thread pool for parallel computations.</Description>
+    <Description>A dedicated Thread Pool for computations parallelization.</Description>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
