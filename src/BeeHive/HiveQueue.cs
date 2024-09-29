@@ -3,10 +3,10 @@ using System.Collections;
 namespace BeeHive;
 
 /// <summary>
-/// A Hive queue containing computations to be run in the Hive.
+/// A Hive Queue containing computations to be run in the Hive.
 /// </summary>
-/// <typeparam name="TRequest">The request type of the computation.</typeparam>
-/// <typeparam name="TResult">The result type of the computation.</typeparam>
+/// <typeparam name="TRequest">The type of computation request.</typeparam>
+/// <typeparam name="TResult">The type of computation result.</typeparam>
 public class HiveQueue<TRequest, TResult> : IReadOnlyCollection<HiveTask<TRequest, TResult>>
 {
     private readonly ComputationQueue _poolComputationQueue;
@@ -22,7 +22,7 @@ public class HiveQueue<TRequest, TResult> : IReadOnlyCollection<HiveTask<TReques
     }
 
     /// <summary>
-    /// Returns the current number of elements in the queue.
+    /// Returns the current number of elements in the Queue.
     /// </summary>
     public int Count => _queuedHiveTasks.Count;
 
@@ -30,7 +30,7 @@ public class HiveQueue<TRequest, TResult> : IReadOnlyCollection<HiveTask<TReques
     /// Enqueues computation to the Hive.
     /// </summary>
     /// <param name="request">A request that will be passed to the computation delegate.</param>
-    /// <returns>A Hive task.</returns>
+    /// <returns>A new instance of <see cref="HiveTask{TRequest, TResult}"/>.</returns>
     public HiveTask<TRequest, TResult> EnqueueCompute(TRequest request)
     {
         var hiveTask = _hiveTaskFactory.Create(request);
@@ -42,9 +42,9 @@ public class HiveQueue<TRequest, TResult> : IReadOnlyCollection<HiveTask<TReques
     }
 
     /// <summary>
-    /// Creates a queue result bag.
+    /// Creates a Hive Result Bag automaticaly populated with completed computations results.
     /// </summary>
-    /// <returns>An instance of Hive queue result bag.</returns>
+    /// <returns>An instance of Hive Result Bag.</returns>
     public IHiveResultBag<TRequest, TResult> CreateResultBag() => _resultBagCollection.AddNewBag();
 
     /// <inheritdoc/>

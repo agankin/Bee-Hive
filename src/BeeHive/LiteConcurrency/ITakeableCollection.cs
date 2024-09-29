@@ -5,11 +5,11 @@ namespace BeeHive;
 /// <summary>
 /// Represents a collection supporting taking out elements.
 /// </summary>
-/// <typeparam name="TItem">The type of the collection elements.</typeparam>
+/// <typeparam name="TItem">The type of elements.</typeparam>
 public interface ITakeableCollection<TItem>
 {
     /// <summary>
-    /// Contains the number of elements in the collection.
+    /// Contains the number of elements in this collection.
     /// </summary>
     public int Count { get; }
 

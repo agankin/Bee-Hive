@@ -6,12 +6,12 @@ namespace BeeHive;
 public static class HiveTaskExtensions
 {
     /// <summary>
-    /// Awaits for Result without throwing exceptions and returns Result that can be in 3 states: a value, an error or cancelled.
+    /// Awaits the Hive Task suppressing exceptions and returns Result that can be in 3 states: a value, an error or cancelled.
     /// </summary>
     /// <param name="hiveTask">The Hive Task.</param>
-    /// <typeparam name="TRequest">The request type of the computation.</typeparam>
-    /// <typeparam name="TResult">The result type of the computation.</typeparam>
-    /// <returns>A task representing computation result.</returns>
+    /// <typeparam name="TRequest">The type of computation request.</typeparam>
+    /// <typeparam name="TResult">The type of computation result.</typeparam>
+    /// <returns>A Task representing computation result.</returns>
     public static async Task<Result<TRequest, TResult>> AsyncResult<TRequest, TResult>(this HiveTask<TRequest, TResult> hiveTask)
     {
         try

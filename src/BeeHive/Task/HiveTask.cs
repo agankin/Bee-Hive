@@ -5,8 +5,8 @@ namespace BeeHive;
 /// <summary>
 /// Represents a queued computation to be performed in the Hive.
 /// </summary>
-/// <typeparam name="TRequest">The request type of the computation.</typeparam>
-/// <typeparam name="TResult">The result type of the computation.</typeparam>
+/// <typeparam name="TRequest">The type of computation request.</typeparam>
+/// <typeparam name="TResult">The type of computation result.</typeparam>
 public class HiveTask<TRequest, TResult>
 {
     private readonly TaskCompletionSource<TResult> _taskCompletionSource;
@@ -32,7 +32,7 @@ public class HiveTask<TRequest, TResult>
     }
 
     /// <summary>
-    /// The request task was created for.
+    /// The request the task was created for.
     /// </summary>
     public TRequest Request { get; }
 
@@ -50,7 +50,7 @@ public class HiveTask<TRequest, TResult>
     public HiveTaskState State => (HiveTaskState)_state;
 
     /// <summary>
-    /// A canonical Task.
+    /// The canonical Task.
     /// </summary>
     public Task<TResult> Task => _taskCompletionSource.Task;
 
@@ -62,12 +62,12 @@ public class HiveTask<TRequest, TResult>
     public ConfiguredTaskAwaitable<TResult>.ConfiguredTaskAwaiter GetAwaiter() => Task.ConfigureAwait(false).GetAwaiter();
 
     /// <summary>
-    /// Attempts to cancel this Hive task.
+    /// Attempts to cancel this Hive Task.
     /// </summary>
     /// <remarks>
     /// Cancels immediately if the computation is in Pending state.
-    /// Requests cancellation if the computation is in InProgress state and
-    /// in this case the time of actual cancellation depends on whether and how the computation supports cooperative cancellation. 
+    /// If the computation is in InProgress state it requests cancellation.
+    /// In this case the time of actual cancellation depends on how the computation supports cooperative cancellation. 
     /// </remarks>
     /// <returns>
     /// True if cancellation possible - the Hive task is in Pending or InProgress state.

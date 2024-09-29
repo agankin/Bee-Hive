@@ -25,12 +25,12 @@ public class Hive : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// Creates a Hive queue.
+    /// Creates a Hive Queue for the Hive.
     /// </summary>
     /// <param name="computationFunc">A computation delegate.</param>
-    /// <typeparam name="TRequest">The request type of the computation.</typeparam>
-    /// <typeparam name="TResult">The result type of the computation.</typeparam>
-    /// <returns>An instance of Hive queue.</returns>
+    /// <typeparam name="TRequest">The type of computation request.</typeparam>
+    /// <typeparam name="TResult">The type of computation result.</typeparam>
+    /// <returns>An instance of <see cref="HiveQueue{TRequest, TResult}"/>.</returns>
     public HiveQueue<TRequest, TResult> GetQueueFor<TRequest, TResult>(Compute<TRequest, TResult> compute) =>
         new HiveQueue<TRequest, TResult>(_computationQueue, compute, _threadPool.CancellationToken);
 

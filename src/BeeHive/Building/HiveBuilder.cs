@@ -1,7 +1,7 @@
 namespace BeeHive;
 
 /// <summary>
-/// A builder for configuring and building Hive instances.
+/// A builder for configuring and building <see cref="Hive"/> instances.
 /// </summary>
 public class HiveBuilder
 {
@@ -64,6 +64,6 @@ public class HiveBuilder
     /// <summary>
     /// Builds a Hive.
     /// </summary>
-    /// <returns>A new instance of Hive.</returns>
+    /// <returns>A new instance of <see cref="Hive"/>.</returns>
     public Hive Build() => new Hive(_configuration);
 }

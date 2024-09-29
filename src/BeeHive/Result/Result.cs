@@ -7,8 +7,8 @@ namespace BeeHive;
 /// <param name="State">Contains a state of the performed computation.</param>
 /// <param name="Value">Contains a result value of the computation if it completed with success.</param>
 /// <param name="Error">Contains an error if the computation failed.</param>
-/// <typeparam name="TRequest">The request type of the computation.</typeparam>
-/// <typeparam name="TResult">The result type of the computation.</typeparam>
+/// <typeparam name="TRequest">The type of computation request.</typeparam>
+/// <typeparam name="TResult">The type of computation result.</typeparam>
 public record Result<TRequest, TResult>(
     TRequest Request,
     ResultState State,
