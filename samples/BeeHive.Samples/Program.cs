@@ -14,10 +14,10 @@ using var isPrimeResults = isPrimeQueue.CreateResultBag();
 
 using var cts = new CancellationTokenSource();
 
-_ = isPrimeQueue.EnqueueCompute("1000000007");
-_ = isPrimeQueue.EnqueueCompute("1000000009");
-_ = isPrimeQueue.EnqueueCompute("1000000011");
-_ = isPrimeQueue.EnqueueCompute("1000000021");
+_ = isPrimeQueue.AddRequest("1000000007");
+_ = isPrimeQueue.AddRequest("1000000009");
+_ = isPrimeQueue.AddRequest("1000000011");
+_ = isPrimeQueue.AddRequest("1000000021");
 
 await isPrimeQueue.WhenAll();
 

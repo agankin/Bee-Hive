@@ -27,11 +27,11 @@ public class HiveQueue<TRequest, TResult> : IReadOnlyCollection<HiveTask<TReques
     public int Count => _queuedHiveTasks.Count;
 
     /// <summary>
-    /// Enqueues computation to the Hive.
+    /// Adds computation request to the Hive.
     /// </summary>
     /// <param name="request">A request that will be passed to the computation delegate.</param>
     /// <returns>A new instance of <see cref="HiveTask{TRequest, TResult}"/>.</returns>
-    public HiveTask<TRequest, TResult> EnqueueCompute(TRequest request)
+    public HiveTask<TRequest, TResult> AddRequest(TRequest request)
     {
         var hiveTask = _hiveTaskFactory.Create(request);
 

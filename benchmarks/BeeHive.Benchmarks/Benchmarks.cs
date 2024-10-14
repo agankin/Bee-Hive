@@ -48,7 +48,7 @@ public class Benchmarks
         var queue = _hive.GetQueueFor<long, long>(TenfoldSync);
 
         var tasks = Enumerable.Range(0, Sum_Up_To_Count + 1)
-            .Select(value => queue.EnqueueCompute(value).Task)
+            .Select(value => queue.AddRequest(value).Task)
             .ToArray();
         Task.WaitAll(tasks);
         
@@ -72,7 +72,7 @@ public class Benchmarks
         var queue = _hive.GetQueueFor<long, long>(TenfoldAsync);
 
         var tasks = Enumerable.Range(0, Sum_Up_To_Count + 1)
-            .Select(value => queue.EnqueueCompute(value).Task)
+            .Select(value => queue.AddRequest(value).Task)
             .ToArray();
         Task.WaitAll(tasks);
         

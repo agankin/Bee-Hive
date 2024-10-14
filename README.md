@@ -19,7 +19,7 @@ It is useful for running long CPU intensive computations in background without r
 
 - [Building a Hive](#building-a-hive)
 - [Working with Hive Queues](#working-with-hive-queues)
-    - [Enqueueing computations](#enqueueing-computations)
+    - [Requesting computations](#requesting-computations)
     - [Enumerating Hive Tasks](#enumerating-hive-tasks)
     - [Awaiting whole Hive Queue](#awaiting-whole-hive-queue)
 - [Working with Hive Tasks](#working-with-hive-tasks)
@@ -49,7 +49,7 @@ hive.Run();                                               // Runs the Hive. This
 
 Hive runs computations fetching them from Hive Queues. Computations from all queues are performed within the single Hive's Thread Pool.
 
-#### Enqueueing computations
+#### Requesting computations
 
 The example below shows how Hive Queues are created and computations are requested:
 
@@ -57,18 +57,18 @@ The example below shows how Hive Queues are created and computations are request
 HiveQueue<string, bool> isPrimeQueue = hive.GetQueueFor<string, bool>(IsPrimeNumber);
 HiveQueue<int, double> sqrtQueue = hive.GetQueueFor<int, double>(SqrtAsync);
 
-HiveTask<string, bool> hiveTask = isPrimeQueue.EnqueueCompute("1007"); // The call returns an instance of Hive Task.
-_ = isPrimeQueue.EnqueueCompute("2333");
-_ = isPrimeQueue.EnqueueCompute("5623");
-_ = isPrimeQueue.EnqueueCompute("7753");
+HiveTask<string, bool> hiveTask = isPrimeQueue.AddRequest("1007"); // The call returns an instance of Hive Task.
+_ = isPrimeQueue.AddRequest("2333");
+_ = isPrimeQueue.AddRequest("5623");
+_ = isPrimeQueue.AddRequest("7753");
 
-_ = sqrtQueue.EnqueueCompute(121);
-_ = sqrtQueue.EnqueueCompute(144);
+_ = sqrtQueue.AddRequest(121);
+_ = sqrtQueue.AddRequest(144);
 ```
 
 #### Enumerating Hive Tasks
 
-Enqueued computations are represented by instances of HiveTask&lt;TRequest, TResult&gt;.
+Requested computations are represented by instances of HiveTask&lt;TRequest, TResult&gt;.
 Hive Queue implements IReadOnlyCollection&lt;HiveTask&lt;TRequest, TResult&gt;&gt; and allows enumeration of pending or currently run Hive Tasks. Once a task completes it gets removed from the owning queue.
 
 The example of accessing Hive Tasks via enumeration:
@@ -109,16 +109,16 @@ A Hive Task represents a computation that will be performed by the Hive.
 
 #### Accessing Hive Tasks
 
-Hive Task is returned from the HiveQueue&lt;TRequest, TResult&gt;.EnqueueCompute(TRequest request) method:
+Hive Task is returned from the HiveQueue&lt;TRequest, TResult&gt;.AddRequest(TRequest request) method:
 
 ```cs
-HiveTask<int, double> hiveTask = sqrtQueue.EnqueueCompute(64);
+HiveTask<int, double> hiveTask = sqrtQueue.AddRequest(64);
 ```
 
 It can also be obtained by enumeration/applying LINQ operators to HiveQueue&lt;TRequest, TResult&gt; implementing IReadOnlyCollection&lt;HiveTask&lt;TRequest, TResult&gt;&gt;:
 
 ```cs
-sqrtQueue.EnqueueCompute(225);
+sqrtQueue.AddRequest(225);
 HiveTask<int, double> hiveTask = sqrtQueue.First();
 ```
 
@@ -127,14 +127,14 @@ HiveTask<int, double> hiveTask = sqrtQueue.First();
 Hive Tasks are awaitables:
 
 ```cs
-HiveTask<string, bool> hiveTask = isPrimeQueue.EnqueueCompute("1000000007");
+HiveTask<string, bool> hiveTask = isPrimeQueue.AddRequest("1000000007");
 bool isPrime = await hiveTask;
 ```
 
 An extension method exists for safely awaiting without exceptions thrown:
 
 ```cs
-HiveTask<int, double> hiveTask = sqrtQueue.EnqueueCompute(-16);          // Unsupported square root of negative number.
+HiveTask<int, double> hiveTask = sqrtQueue.AddRequest(-16);          // Unsupported square root of negative number.
 Result<int, double> result = await hiveTask.AsyncResult();
 
 // Matching possible states of the result: having a value of successfully completed computation, an error or cancelled.
@@ -148,7 +148,7 @@ result.Match(
 Canonical Task&lt;TResult&gt; can be obtained via Task property or by implicit conversion:
 
 ```cs
-HiveTask<int, double> hiveTask = sqrtQueue.EnqueueCompute(256);
+HiveTask<int, double> hiveTask = sqrtQueue.AddRequest(256);
 
 Task<double> task = hiveTask.Task;
 Task<double> theSameTask = hiveTask;
@@ -157,7 +157,7 @@ Task<double> theSameTask = hiveTask;
 Hive Task has properties containing initial computation request, current state and computed result:
 
 ```cs
-HiveTask<string, bool> hiveTask = isPrimeQueue.EnqueueCompute("1000000009");
+HiveTask<string, bool> hiveTask = isPrimeQueue.AddRequest("1000000009");
 
 await hiveTask;
 
@@ -171,7 +171,7 @@ Debug.Assert(hiveTask.Result?.Value == true);                        // After co
 If cooperative cancellation is supported a Hive Task can be cancelled by calling the HiveTask&lt;TRequest, TResult&gt;.Cancel() method:
 
 ```cs
-HiveTask<int, double> hiveTask = sqrtQueue.EnqueueCompute(64);
+HiveTask<int, double> hiveTask = sqrtQueue.AddRequest(64);
 hiveTask.Cancel();
 
 try
@@ -189,7 +189,7 @@ But if cancellation isn't supported this call will have no effect.
 A Hive Task goes to an error state if an exception occures:
 
 ```cs
-HiveTask<int, double> hiveTask = sqrtQueue.EnqueueCompute(-16);     // Unsupported square root of negative number.
+HiveTask<int, double> hiveTask = sqrtQueue.AddRequest(-16);     // Unsupported square root of negative number.
 
 try
 {
@@ -216,10 +216,10 @@ When a Result Bag is no longer needed it must be disposed to prevent further fil
 ```cs
 using IHiveResultBag<int, double> resultBag = sqrtQueue.CreateResultBag();
 
-// Enqueue some computations.
-_ = sqrtQueue.EnqueueCompute(121);
-_ = sqrtQueue.EnqueueCompute(144);
-_ = sqrtQueue.EnqueueCompute(256);
+// Request some computations.
+_ = sqrtQueue.AddRequest(121);
+_ = sqrtQueue.AddRequest(144);
+_ = sqrtQueue.AddRequest(256);
 
 await sqrtQueue.WhenAll();                          // Awaits for all computations to complete.
 
@@ -241,9 +241,9 @@ It prints something like this:
 ```
 
 ```cs
-// Enqueue some additional computations.
-_ = sqrtQueue.EnqueueCompute(289);
-_ = sqrtQueue.EnqueueCompute(-625);
+// Request some additional computations.
+_ = sqrtQueue.AddRequest(289);
+_ = sqrtQueue.AddRequest(-625);
 
 // Waiting for each next result up to 5000ms and displaying it.
 while (resultBag.TryTakeOrWait(5000, out var result))
