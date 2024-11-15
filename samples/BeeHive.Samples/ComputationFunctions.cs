@@ -9,13 +9,10 @@ internal static class ComputationFunctions
     /// A sync function determining if an arbitrarily large number in string is prime.
     /// The implementation is inefficient but good as an example of a long running function.
     /// </summary>
-    public static bool IsPrimeNumber(string numberString, CancellationToken cancellationToken)
+    public static bool IsPrimeNumber(long number, CancellationToken cancellationToken)
     {
-        Thread.Sleep(100);
+        Thread.Sleep(100);                                    // Simulates some work.
         cancellationToken.ThrowIfCancellationRequested();
-
-        if (!BigInteger.TryParse(numberString, out var number))
-            throw new Exception("Number has wrong format.");
 
         if (number < 0)
             throw new Exception("Number must be greater than or equal to zero.");
