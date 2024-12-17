@@ -107,22 +107,23 @@ internal class HiveTaskFactory<TRequest, TResult>
         }
     }
 
-    private void OnCompleted(HiveTask<TRequest, TResult> task, Result<TRequest, TResult> result)
-    {        
-        _onCompleted(task, result);
-        task.Complete(result);
-    }
-
     private void OnCancelled(HiveTask<TRequest, TResult> task)
     {
         var cancelledResult = Result<TRequest, TResult>.Cancelled(task.Request);
         OnCompleted(task, cancelledResult);
     }
+    
+    private void OnCompleted(HiveTask<TRequest, TResult> task, Result<TRequest, TResult> result)
+    {        
+        task.Complete(result);
+        _onCompleted(task);
+    }
 
     private void OnTaskCancelled(HiveTask<TRequest, TResult> task)
     {        
         var cancelledResult = Result<TRequest, TResult>.Cancelled(task.Request);
-        _onCancelled(task);
         task.Complete(cancelledResult);
+
+        _onCancelled(task);
     }
 }

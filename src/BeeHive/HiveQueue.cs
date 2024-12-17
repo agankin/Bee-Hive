@@ -7,13 +7,14 @@ namespace BeeHive;
 /// </summary>
 /// <typeparam name="TRequest">The type of computation request.</typeparam>
 /// <typeparam name="TResult">The type of computation result.</typeparam>
-public class HiveQueue<TRequest, TResult> : IReadOnlyCollection<HiveTask<TRequest, TResult>>
+public class HiveQueue<TRequest, TResult> : IReadOnlyCollection<HiveTask<TRequest, TResult>>, IObservable<Result<TRequest, TResult>>
 {
     private readonly ComputationQueue _poolComputationQueue;
     private readonly HiveTaskFactory<TRequest, TResult> _hiveTaskFactory;
     
     private readonly ConcurrentSet<HiveTask<TRequest, TResult>> _queuedHiveTasks = new();
     private readonly HiveResultBagCollection<TRequest, TResult> _resultBagCollection = new();
+    private readonly ResultSubscriptionSet<TRequest, TResult> _subscriptions = new();
 
     internal HiveQueue(ComputationQueue poolComputationQueue, Compute<TRequest, TResult> compute, CancellationToken poolCancellationToken)
     {
@@ -53,15 +54,34 @@ public class HiveQueue<TRequest, TResult> : IReadOnlyCollection<HiveTask<TReques
     /// <inheritdoc/>
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     
-    private void OnTaskCompleted(HiveTask<TRequest, TResult> hiveTask, Result<TRequest, TResult> result)
+    /// <inheritdoc/>
+    public IDisposable Subscribe(IObserver<Result<TRequest, TResult>> observer) => _subscriptions.Add(observer);
+    
+    private void OnTaskCompleted(HiveTask<TRequest, TResult> hiveTask)
     {
         _queuedHiveTasks.Remove(hiveTask);
-        _resultBagCollection.AddResult(result);
+        _resultBagCollection.AddResult(hiveTask.Result!);
+
+        NotifyObservers(hiveTask.Result!);
     }
 
     private void OnTaskCancelled(HiveTask<TRequest, TResult> hiveTask)
     {
         _queuedHiveTasks.Remove(hiveTask);
         _poolComputationQueue.RemoveComputation(hiveTask.Computation);
+
+        NotifyObservers(hiveTask.Result!);
+    }
+
+    private void NotifyObservers(Result<TRequest, TResult> result)
+    {
+        if (!_subscriptions.Any())
+            return;
+
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            foreach (var subscription in _subscriptions)
+                subscription.OnNext(result);
+        });
     }
 }

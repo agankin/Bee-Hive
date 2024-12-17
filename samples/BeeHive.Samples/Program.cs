@@ -1,4 +1,6 @@
-﻿using BeeHive;
+﻿using System.Reactive.Linq;
+using BeeHive;
+
 using static BeeHive.Samples.ComputationFunctions;
 
 Hive hive = new HiveBuilder()
@@ -22,16 +24,24 @@ _ = isPrimeQueue.AddRequest(1000000021);
 await isPrimeQueue.WhenAll();
 
 while (isPrimeResults.TryTake(out var result))
-{
-    var resultDescription = result.State switch
-    {
-        ResultState.Success => $"IsPrime(\"{result.Request}\") => {result.Value}",
-        ResultState.Error => $"IsPrime(\"{result.Request}\") => Error({result.Error?.Message})",
-        ResultState.Cancelled => $"IsPrime(\"{result.Request}\") => Cancelled",
-        _ => throw new Exception($"Unsupported {nameof(ResultState)} value: {result.State}.")
-    };
+    Console.WriteLine(Format(result));
 
-    Console.WriteLine(resultDescription);
-}
+isPrimeQueue.Subscribe(
+    result => Console.WriteLine(Format(result)),
+    _ => Console.WriteLine("IsPrimeQueue completed."));
+
+_ = isPrimeQueue.AddRequest(1000000033);
+_ = isPrimeQueue.AddRequest(1000000037);
+_ = isPrimeQueue.AddRequest(1000000087);
+_ = isPrimeQueue.AddRequest(1000000091);
+_ = isPrimeQueue.AddRequest(1000000093);
 
 Console.ReadKey(true);
+
+string Format(Result<long, bool> result) => result.State switch
+{
+    ResultState.Success => $"IsPrime({result.Request}) => {result.Value}",
+    ResultState.Error => $"IsPrime({result.Request}) => Error({result.Error?.Message})",
+    ResultState.Cancelled => $"IsPrime({result.Request}) => Cancelled",
+    _ => throw new Exception($"Unsupported {nameof(ResultState)} value: {result.State}.")
+};
