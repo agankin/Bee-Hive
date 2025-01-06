@@ -27,8 +27,9 @@ while (isPrimeResults.TryTake(out var result))
     Console.WriteLine(Format(result));
 
 isPrimeQueue.Subscribe(
-    result => Console.WriteLine(Format(result)),
-    _ => Console.WriteLine("IsPrimeQueue completed."));
+    onNext: result => Console.WriteLine(Format(result)),
+    onError: _ => Console.WriteLine("IsPrimeQueue completed.")
+);
 
 _ = isPrimeQueue.AddRequest(1000000033);
 _ = isPrimeQueue.AddRequest(1000000037);

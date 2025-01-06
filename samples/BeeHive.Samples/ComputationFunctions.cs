@@ -15,7 +15,7 @@ internal static class ComputationFunctions
         cancellationToken.ThrowIfCancellationRequested();
 
         if (number < 0)
-            throw new Exception("Number must be greater than or equal to zero.");
+            throw new Exception("The number must be greater than or equal to zero.");
 
         if (number == 0 || number == 1)
             return false;
@@ -55,7 +55,7 @@ internal static class ComputationFunctions
         }
 
         if (value < 0)
-            throw new Exception("Cannot calculate sqrt of negative value.");
+            throw new Exception("Cannot calculate sqrt of the negative value.");
 
         var result = Math.Sqrt(value);
         return result;

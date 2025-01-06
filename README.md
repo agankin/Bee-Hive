@@ -4,14 +4,15 @@
 
 A dedicated Thread Pool for computations parallelization.
 
-It is useful for running long CPU intensive computations in background without risk of the standard .NET Thread Pool starvation.
+It is useful for running in background long CPU intensive computations without risk of the standard .NET Thread Pool starvation.
 
 ## Features
 
 - Provides explicit strongly typed queues for requested computations.
 - Queued computations are represented by Hive Tasks that can be awaited/cooperatively cancelled.
 - Supports synchronous and asynchronous computations.
-- Supports accumulating results of completed computations into Result Bags.
+- Hive Queues are observables notifying about completed results.
+- Supports accumulating results of finished computations into Result Bags.
 - Threads can be dynamically added for extra load and automaticly stopped after some idle time.
 - Has configurable lower/upper number of running threads and idle time for threads to be stopped.
 
@@ -22,9 +23,10 @@ It is useful for running long CPU intensive computations in background without r
 - [Requesting computations](#requesting-computations)
 - [Working with Hive Tasks](#working-with-hive-tasks)
 - [Cancelling computations](#cancelling-computations)
-- [Handling errors](#handling-errors)
+- [Error handling](#error-handling)
+- [Observing results](#observing-results)
 - [Accumulating results in Result Bags](#accumulating-results-in-result-bags)
-- [Disposing Hive](#disposing-hive)
+- [Disposing a Hive](#disposing-a-hive)
 - [Functions used in examples](#functions-used-in-examples)
 
 ### Building a Hive
@@ -43,9 +45,9 @@ hive.Run();                                               // Runs the Hive. This
 
 ### Creating Hive Queues
 
-Hive Queue is a queue created for a computation delegate and holding requests for the computation. Computation delegate takes request and optionally cancellation token as input and returns a plain result or a Task/ValueTask representing result of an async computation.
+Hive Queues are collections holding requests for computations. To run a computation in a Hive the corresponding Hive Queue must first be created.
 
-Each Hive can have unlimited number of Hive Queues. Hive fetches requests in the order of adding them to all its Hive Queues and performs computations within its single Thread Pool.
+Each Hive can have unlimited number of Hive Queues. A Hive fetches requests from all of its Hive Queues in the FIFO order of adding and performs computations within its single Thread Pool.
 
 The definition of functions used in examples can be found in [Functions used in examples](#functions-used-in-examples) section.
 
@@ -56,17 +58,17 @@ HiveQueue<long, bool> isPrimeQueue = hive.GetQueueFor<long, bool>(IsPrimeNumber)
 // A queue to calculate square root of an integer.
 HiveQueue<int, double> sqrtQueue = hive.GetQueueFor<int, double>(SqrtAsync);
 
-// Separate queue of the same type.
+// Another queue of the previous type.
 HiveQueue<int, double> sqrtQueue2 = hive.GetQueueFor<int, double>(SqrtAsync);
 ```
 
 ### Requesting computations
 
-Computational requests are added to Hive Queues to perform computations. Requested computations are represented by Hive Task instances.
+Computations are run by adding requests for them to Hive Queues. Each call returns an instance of Hive Task representing the requested computation which will be performed at some moment in future.
 
 ```cs
 // Requesting a few computations.
-HiveTask<string, bool> hiveTask = isPrimeQueue.AddRequest(1007); // The call returns an instance of Hive Task.
+HiveTask<string, bool> hiveTask = isPrimeQueue.AddRequest(1007); // Returns an instance of Hive Task.
 _ = isPrimeQueue.AddRequest(2333);
 _ = isPrimeQueue.AddRequest(5623);
 _ = isPrimeQueue.AddRequest(7753);
@@ -76,62 +78,38 @@ _ = sqrtQueue.AddRequest(121);
 _ = sqrtQueue.AddRequest(144);
 ```
 
-### Working with Hive Tasks
-
-Hive Queue supports enumeration of pending or currently run Hive Tasks. Once a Hive Task completes or fails with an error it gets removed from the owning Hive Queue.
+Hive Queues support enumeration of pending or currently run Hive Tasks. Once a Hive Task completes or fails because of an error it gets removed from the owning Hive Queue.
 
 ```cs
 foreach (HiveTask<long, bool> hiveTask in isPrimeQueue)
-    Console.WriteLine($"Computing is {hiveTask.Request} prime or not. State={hiveTask.State}.");
-
-Console.WriteLine();
-
-foreach (HiveTask<int, double> hiveTask in sqrtQueue)
-    Console.WriteLine($"Computing square root of {hiveTask.Request}. State={hiveTask.State}.");
+    Console.WriteLine($"Computing {nameof(IsPrimeNumber)}({hiveTask.Request})...");
 ```
 
-It prints something like:
+It prints something like this:
 
 ```
-Computing is 1007 prime or not. State=InProgress.
-Computing is 2333 prime or not. State=InProgress.
-Computing is 5623 prime or not. State=InProgress.
-Computing is 7753 prime or not. State=InProgress.
-Computing is 7761 prime or not. State=Pending.
-
-Computing square root of 121. State=Pending.
-Computing square root of 144. State=Pending.
+Computing IsPrimeNumber(1007)...
+Computing IsPrimeNumber(2333)...
+Computing IsPrimeNumber(5623)...
+Computing IsPrimeNumber(7753)...
+Computing IsPrimeNumber(7761)...
 ```
 
-Hive Task is awaitable:
+### Working with Hive Tasks
+
+A Hive Task has properties containing the initial computation request, the current state and optionally a computed result:
 
 ```cs
-HiveTask<string, bool> hiveTask = isPrimeQueue.AddRequest(1000000007);
-bool isPrime = await hiveTask;
+HiveTask<string, bool> hiveTask = isPrimeQueue.AddRequest(1000000009);
+
+await hiveTask;
+
+Debug.Assert(hiveTask.Request == 1000000009);                        // A request the computation was invoked for.
+Debug.Assert(hiveTask.State == HiveTaskState.SuccessfullyCompleted); // After awaiting state is "successfully completed".
+Debug.Assert(hiveTask.Result?.Value == true);                        // After completion the result contains a computed value.
 ```
 
-An extension method exists for safely awaiting without exceptions thrown on error:
-
-```cs
-HiveTask<int, double> hiveTask = sqrtQueue.AddRequest(-16);          // Unsupported square root of negative number.
-Result<int, double> result = await hiveTask.AsyncResult();
-
-// Matching possible states of the computation result.
-// Prints "Cannot calculate sqrt of negative value.".
-result.Match(
-    onValue: value => Console.WriteLine($"Value: {value}"),
-    onError: error => Console.WriteLine($"Error: {error.Message}"),
-    onCancelled: () => Console.WriteLine($"Cancelled")
-);
-```
-
-One more handy extension method exists allowing to await all Hive Tasks in a Hive Queue:
-
-```cs
-await isPrimeQueue.WhenAll();        // After this line all IsPrimeNumber computations are completed.
-```
-
-Canonical Task can be obtained via property or by implicit conversion:
+A canonical Task can be obtained via property or by implicit conversion:
 
 ```cs
 HiveTask<int, double> hiveTask = sqrtQueue.AddRequest(256);
@@ -140,23 +118,39 @@ Task<double> task = hiveTask.Task;          // Obtaining Task from property.
 Task<double> theSameTask = hiveTask;        // Obtaining Task by implicit conversion.
 ```
 
-Hive Task has properties containing initial computation request, current state and computed result:
+A Hive Task is awaitable:
 
 ```cs
-HiveTask<string, bool> hiveTask = isPrimeQueue.AddRequest(1000000009);
+HiveTask<string, bool> hiveTask = isPrimeQueue.AddRequest(1000000007);
+bool isPrime = await hiveTask;
+```
 
-await hiveTask;
+A handy extension method exists for safely awaiting. It suppresses exceptions and returns Result&lt;TRequest, TResult&gt;: 
 
-Debug.Assert(hiveTask.Request == 1000000009);                        // Request the computation was invoked for.
-Debug.Assert(hiveTask.State == HiveTaskState.SuccessfullyCompleted); // After awaiting state becomes SuccessfullyCompleted.
-Debug.Assert(hiveTask.Result?.Value == true);                        // After completion result contains computed value.
+```cs
+HiveTask<int, double> hiveTask = sqrtQueue.AddRequest(-16);          // Unsupported square root of negative number.
+Result<int, double> result = await hiveTask.AsyncResult();
+
+// A result can be in one of the three states: a result value, an error occured or being in the cancelled state.
+// The code below matches the result and prints: "Error: Cannot calculate sqrt of the negative value.".
+result.Match(
+    onValue: value => Console.WriteLine($"Result: {value}"),
+    onError: error => Console.WriteLine($"Error: {error.Message}"),
+    onCancelled: () => Console.WriteLine($"Cancelled")
+);
+```
+
+There is one more handy extension method exists that allows to safely await all Hive Tasks in a Hive Queue:
+
+```cs
+await isPrimeQueue.WhenAll();        // After this line all IsPrimeNumber computations are completed.
 ```
 
 ### Cancelling computations
 
-Pending or running computations can be cancelled by invoking **bool Cancel()** Hive Task instance method.
+Pending or running computations can be cancelled.
 
-Cancellation is guranteed when a Hive Task is in Pending state. For a running computation the cancellation time depends on how the computation delegate supports cooperative cancellation. If it doesn't support it at all then cancellation will happen only after the delegate execution completes or error occures.
+Cancellation is guranteed when a Hive Task is in the pending state. For a running computation cancellation time depends on how the computation delegate supports cooperative cancellation. If a delegate doesn't support cancellation at all then a running computation will be cancelled only after the delegate execution completes or an error occures.
 
 ```cs
 HiveTask<int, double> hiveTask = sqrtQueue.AddRequest(64);
@@ -164,45 +158,64 @@ hiveTask.Cancel();
 
 try
 {
-    await hiveTask;                                                   // Await for cancellation.
+    await hiveTask;                                                   // Awaits for cancellation.
 }
 catch (TaskCanceledException) {}
-Debug.Assert(hiveTask.State == HiveTaskState.Cancelled);              // Now the task is in Cancelled state.
+Debug.Assert(hiveTask.State == HiveTaskState.Cancelled);              // Now the task is in "cancelled" state.
 ```
 
-### Handling errors
+### Error handling
 
-If an exception occures during a computation delegate execution the corresponding Hive Task will go to Error state.
+If an exception occures during a computation the corresponding Hive Task will go to the error state.
 
 ```cs
-HiveTask<int, double> hiveTask = sqrtQueue.AddRequest(-16);         // Unsupported square root of negative number.
+HiveTask<int, double> hiveTask = sqrtQueue.AddRequest(-16);         // Requesting unsupported square root computation of the negative number.
 
 try
 {
-    await hiveTask;                                                 // Await for fail.
+    await hiveTask;                                                 // Awaits for fail.
 }
 catch (Exception ex)
 {
-    Console.WriteLine(ex.Message);                                  // Prints "Cannot calculate sqrt of negative value.".
+    Console.WriteLine(ex.Message);                                  // Prints "Cannot calculate sqrt of the negative value.".
 }
-Debug.Assert(hiveTask.State == HiveTaskState.Error);                // Now the task is in Error state.
+Debug.Assert(hiveTask.State == HiveTaskState.Error);                // Now the task is in an error state.
+```
+
+### Observing results
+
+Hive Queues are observables notifying about results of finished computations.
+
+```cs
+using System.Reactive.Linq;
+
+// Subscribes for results of finished computations.
+isPrimeQueue.Subscribe(
+    onNext: Console.WriteLine,
+    onError: _ => Console.WriteLine($"{nameof(isPrimeQueue)} completed.")
+);
+
+isPrimeQueue.AddRequest(5779);
+isPrimeQueue.AddRequest(5781);
+isPrimeQueue.AddRequest(5783);
 ```
 
 ### Accumulating results in Result Bags
 
-Result Bag is a collection created for a Hive Queue and filled with results of completed computations.
+A Result Bag is a collection created for a Hive Queue and automatically filled with results of finished computations.
 
-Result Bag is an object returned from **IHiveResultBag<int, double>** . It supports enumeration and has overloaded methods for taking out results:
+It supports enumeration and has methods for taking out results:
 
-- **TryTake** - tries to get a result without waiting and returns a flag meaning if a result is found.
-- **TryTakeOrWait** - tries to get a result and returns immediately if a result exists or waits for some time/infinitely for a new result. Returns a flag meaning if a result is found.
+- TryTake - tries to get a result without waiting and returns a flag meaning if a result is found.
+- TryTakeOrWait - tries to get a result and returns immediately if a result exists or waits for some time/infinitely for a new result. Returns a flag meaning if a result is found.
 
 When a Result Bag is no longer needed it must be disposed to prevent further filling with new results.
 
 ```cs
+// Creating a result bag.
 using IHiveResultBag<int, double> resultBag = sqrtQueue.CreateResultBag();
 
-// Request some computations.
+// Requesting some computations.
 _ = sqrtQueue.AddRequest(121);
 _ = sqrtQueue.AddRequest(144);
 _ = sqrtQueue.AddRequest(256);
@@ -216,18 +229,18 @@ while (resultBag.TryTake(out var result))
 }
 ```
 
-It prints something like this: 
+It prints these lines: 
 
-```cs
-// ***************** CONSOLE *******************
-// Sqrt of 144: State=Success, Value=12, Error=
-// Sqrt of 256: State=Success, Value=16, Error=
-// Sqrt of 121: State=Success, Value=11, Error=
-// *********************************************
+```W
+Sqrt of 144: State=Success, Value=12, Error=
+Sqrt of 256: State=Success, Value=16, Error=
+Sqrt of 121: State=Success, Value=11, Error=
 ```
 
+Another example of taking out with waiting:
+
 ```cs
-// Request some additional computations.
+// Requests some additional computations.
 _ = sqrtQueue.AddRequest(289);
 _ = sqrtQueue.AddRequest(-625);
 
@@ -236,18 +249,20 @@ while (resultBag.TryTakeOrWait(5000, out var result))
 {
     Console.WriteLine($"Sqrt of {result.Request}: State={result.State}, Value={result.Value}, Error={result.Error?.Message}");
 }
-
-// ***************** CONSOLE *******************
-// Sqrt of 289: State=Success, Value=17, Error=
-// Sqrt of -625: State=Error, Value=0, Error=Cannot calculate sqrt of negative value.
-// *********************************************
 ```
 
-### Disposing Hive
+It prints these lines: 
 
-Hive must be disposed when it is no longer needed.
+```
+Sqrt of 289: State=Success, Value=17, Error=
+Sqrt of -625: State=Error, Value=0, Error=Cannot calculate sqrt of the negative value.
+```
 
-On disposal all running computations receive cancellation. Idle threads are stopped immediately but busy threads continue running until their computations cancel/complete.
+### Disposing a Hive
+
+When a Hive is no longer needed it must be disposed.
+
+On disposal all running computations receive cancellation. Idle threads are stopped immediately but busy threads continue running until their currently run computations get cancelled or complete/fail.
 
 ```cs
 var hive1 = new HiveBuilder().Build();
@@ -262,7 +277,7 @@ await hive2.DisposeAsync();                // Awaits all threads to finish.
 ```cs
 /// <summary>
 /// A sync function determining if a number is prime.
-/// The implementation is inefficient but good as an example of long running function.
+/// The implementation is inefficient but good as an example of a long running function.
 /// </summary>
 public static bool IsPrimeNumber(long number, CancellationToken cancellationToken)
 {
@@ -270,7 +285,7 @@ public static bool IsPrimeNumber(long number, CancellationToken cancellationToke
     cancellationToken.ThrowIfCancellationRequested();
 
     if (number < 0)
-        throw new Exception("Number must be greater than or equal to zero.");
+        throw new Exception("The number must be greater than or equal to zero.");
 
     if (number == 2)
         return true;
@@ -303,7 +318,7 @@ public static async Task<double> SqrtAsync(int value, CancellationToken cancella
     }
 
     if (value < 0)
-        throw new Exception("Cannot calculate sqrt of negative value.");
+        throw new Exception("Cannot calculate sqrt of the negative value.");
 
     var result = Math.Sqrt(value);
     return result;
