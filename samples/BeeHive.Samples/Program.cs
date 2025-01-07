@@ -26,7 +26,7 @@ await isPrimeQueue.WhenAll();
 while (isPrimeResults.TryTake(out var result))
     Console.WriteLine(Format(result));
 
-isPrimeQueue.Subscribe(
+using var subscription = isPrimeQueue.Subscribe(
     onNext: result => Console.WriteLine(Format(result)),
     onError: _ => Console.WriteLine("IsPrimeQueue completed.")
 );

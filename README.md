@@ -190,7 +190,7 @@ Hive Queues are observables notifying about results of finished computations.
 using System.Reactive.Linq;
 
 // Subscribes for results of finished computations.
-isPrimeQueue.Subscribe(
+using var subscription = isPrimeQueue.Subscribe(
     onNext: Console.WriteLine,
     onError: _ => Console.WriteLine($"{nameof(isPrimeQueue)} completed.")
 );
