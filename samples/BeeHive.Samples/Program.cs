@@ -27,8 +27,11 @@ while (isPrimeResults.TryTake(out var result))
     Console.WriteLine(Format(result));
 
 using var subscription = isPrimeQueue.Subscribe(
-    onNext: result => Console.WriteLine(Format(result)),
-    onError: _ => Console.WriteLine("IsPrimeQueue completed.")
+    onNext: result => result.Match(
+        onValue: value => Console.WriteLine($"Result: {value}"),
+        onError: error => Console.WriteLine($"Error occured: {error.Message}"),
+        onCancelled: () => Console.WriteLine($"Computation was cancelled")
+    )
 );
 
 _ = isPrimeQueue.AddRequest(1000000033);

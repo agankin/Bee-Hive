@@ -24,8 +24,7 @@ internal class HiveThread
 
     public HiveThread Run()
     {
-        var isRunning = Interlocked.CompareExchange(ref _isRunning, 1, 0);
-        if (isRunning == 1)
+        if (Interlocked.Exchange(ref _isRunning, 1) == 1)
             throw new InvalidOperationException("Hive Thread is already in running state.");
 
         var thread = new Thread(QueueHandler)
