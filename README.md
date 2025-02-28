@@ -46,20 +46,20 @@ hive.Run();                                               // Runs the Hive. This
 
 The first step is obtaining a Hive Queue. Hive Queues are collections holding requests for computations. Each Hive can have unlimited number of Hive Queues. It fetches requests in FIFO order of adding from all of its queues and performs computations within its single Thread Pool.
 
-The sample below shows how to obtain different instances of Hive Queues. The definition of computational functions used can be found in [Functions used in examples](#functions-used-in-examples) section.
+The sample below shows how to create different instances of Hive Queues. The definition of computational functions used can be found in [Functions used in examples](#functions-used-in-examples) section.
 
 ```cs
 // A queue to calculate is a number prime or not.
-HiveQueue<long, bool> isPrimeQueue = hive.GetQueueFor<long, bool>(IsPrimeNumber); 
+HiveQueue<long, bool> isPrimeQueue = hive.CreateQueueFor<long, bool>(IsPrimeNumber); 
 
 // A queue to calculate square root of an integer.
-HiveQueue<int, double> sqrtQueue = hive.GetQueueFor<int, double>(SqrtAsync);
+HiveQueue<int, double> sqrtQueue = hive.CreateQueueFor<int, double>(SqrtAsync);
 
 // Another queue of the previous type.
-HiveQueue<int, double> sqrtQueue2 = hive.GetQueueFor<int, double>(SqrtAsync);
+HiveQueue<int, double> sqrtQueue2 = hive.CreateQueueFor<int, double>(SqrtAsync);
 ```
 
-Computations are called by adding requests to Hive Queues. In response Hive Tasks are returned representing computations that will be performed at some moment in future.
+Computations are called by adding requests to Hive Queues. In response they return Hive Tasks representing computations that will be performed at some moment in future.
 
 ```cs
 // Requesting 3 computations.

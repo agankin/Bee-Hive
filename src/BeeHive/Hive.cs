@@ -31,7 +31,7 @@ public class Hive : IDisposable, IAsyncDisposable
     /// <typeparam name="TRequest">The type of computation request.</typeparam>
     /// <typeparam name="TResult">The type of computation result.</typeparam>
     /// <returns>An instance of <see cref="HiveQueue{TRequest, TResult}"/>.</returns>
-    public HiveQueue<TRequest, TResult> GetQueueFor<TRequest, TResult>(Compute<TRequest, TResult> compute) =>
+    public HiveQueue<TRequest, TResult> CreateQueueFor<TRequest, TResult>(Compute<TRequest, TResult> compute) =>
         new HiveQueue<TRequest, TResult>(_computationQueue, compute, _threadPool.CancellationToken);
 
     /// <inheritdoc/>

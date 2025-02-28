@@ -11,7 +11,7 @@ Hive hive = new HiveBuilder()
 
 hive.Run();
 
-var isPrimeQueue = hive.GetQueueFor<long, bool>(IsPrimeNumber);
+var isPrimeQueue = hive.CreateQueueFor<long, bool>(IsPrimeNumber);
 using var isPrimeResults = isPrimeQueue.CreateResultBag();
 
 using var cts = new CancellationTokenSource();

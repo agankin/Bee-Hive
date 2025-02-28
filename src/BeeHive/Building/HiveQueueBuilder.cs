@@ -13,10 +13,10 @@ public static class HiveQueueBuilder
     /// <typeparam name="TRequest">The type of computation request.</typeparam>
     /// <typeparam name="TResult">The type of computation result.</typeparam>
     /// <returns>A new instance of <see cref="HiveQueue{TRequest, TResult}"/>.</returns>
-    public static HiveQueue<TRequest, TResult> GetQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, TResult> computationFunc)
+    public static HiveQueue<TRequest, TResult> CreateQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, TResult> computationFunc)
     {
         var computeAsync = computationFunc.ToComputeDelegate();
-        return hive.GetQueueFor(computeAsync);
+        return hive.CreateQueueFor(computeAsync);
     }
 
     /// <summary>
@@ -27,10 +27,10 @@ public static class HiveQueueBuilder
     /// <typeparam name="TRequest">The type of computation request.</typeparam>
     /// <typeparam name="TResult">The type of computation result.</typeparam>
     /// <returns>A new instance of <see cref="HiveQueue{TRequest, TResult}"/>.</returns>
-    public static HiveQueue<TRequest, TResult> GetQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, CancellationToken, TResult> computationFunc)
+    public static HiveQueue<TRequest, TResult> CreateQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, CancellationToken, TResult> computationFunc)
     {
         var computeAsync = computationFunc.ToComputeDelegate();
-        return hive.GetQueueFor(computeAsync);
+        return hive.CreateQueueFor(computeAsync);
     }
 
     /// <summary>
@@ -41,10 +41,10 @@ public static class HiveQueueBuilder
     /// <typeparam name="TRequest">The type of computation request.</typeparam>
     /// <typeparam name="TResult">The type of computation result.</typeparam>
     /// <returns>A new instance of <see cref="HiveQueue{TRequest, TResult}"/>.</returns>
-    public static HiveQueue<TRequest, TResult> GetQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, Task<TResult>> computationFunc)
+    public static HiveQueue<TRequest, TResult> CreateQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, Task<TResult>> computationFunc)
     {
         var computeAsync = computationFunc.ToComputeDelegate();
-        return hive.GetQueueFor(computeAsync);
+        return hive.CreateQueueFor(computeAsync);
     }
 
     /// <summary>
@@ -55,10 +55,10 @@ public static class HiveQueueBuilder
     /// <typeparam name="TRequest">The type of computation request.</typeparam>
     /// <typeparam name="TResult">The type of computation result.</typeparam>
     /// <returns>A new instance of <see cref="HiveQueue{TRequest, TResult}"/>.</returns>
-    public static HiveQueue<TRequest, TResult> GetQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, CancellationToken, Task<TResult>> computationFunc)
+    public static HiveQueue<TRequest, TResult> CreateQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, CancellationToken, Task<TResult>> computationFunc)
     {
         var computeAsync = computationFunc.ToComputeDelegate();
-        return hive.GetQueueFor(computeAsync);
+        return hive.CreateQueueFor(computeAsync);
     }
 
     /// <summary>
@@ -69,10 +69,10 @@ public static class HiveQueueBuilder
     /// <typeparam name="TRequest">The type of computation request.</typeparam>
     /// <typeparam name="TResult">The type of computation result.</typeparam>
     /// <returns>A new instance of <see cref="HiveQueue{TRequest, TResult}"/>.</returns>
-    public static HiveQueue<TRequest, TResult> GetQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, ValueTask<TResult>> computationFunc)
+    public static HiveQueue<TRequest, TResult> CreateQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, ValueTask<TResult>> computationFunc)
     {
         var computeAsync = computationFunc.ToComputeDelegate();
-        return hive.GetQueueFor(computeAsync);
+        return hive.CreateQueueFor(computeAsync);
     }
 
     /// <summary>
@@ -83,9 +83,9 @@ public static class HiveQueueBuilder
     /// <typeparam name="TRequest">The type of computation request.</typeparam>
     /// <typeparam name="TResult">The type of computation result.</typeparam>
     /// <returns>A new instance of <see cref="HiveQueue{TRequest, TResult}"/>.</returns>
-    public static HiveQueue<TRequest, TResult> GetQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, CancellationToken, ValueTask<TResult>> computationFunc)
+    public static HiveQueue<TRequest, TResult> CreateQueueFor<TRequest, TResult>(this Hive hive, Func<TRequest, CancellationToken, ValueTask<TResult>> computationFunc)
     {
         var computeAsync = computationFunc.ToComputeDelegate();
-        return hive.GetQueueFor(computeAsync);
+        return hive.CreateQueueFor(computeAsync);
     }
 }

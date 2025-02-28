@@ -45,7 +45,7 @@ public class Benchmarks
     [Benchmark(Description = "Run sync tasks in Hive")]
     public void RunHiveSyncTasks()
     {
-        var queue = _hive.GetQueueFor<long, long>(TenfoldSync);
+        var queue = _hive.CreateQueueFor<long, long>(TenfoldSync);
 
         var tasks = Enumerable.Range(0, Sum_Up_To_Count + 1)
             .Select(value => queue.AddRequest(value).Task)
@@ -69,7 +69,7 @@ public class Benchmarks
     [Benchmark(Description = "Run async tasks in Hive")]
     public void RunHiveAsyncTasks()
     {
-        var queue = _hive.GetQueueFor<long, long>(TenfoldAsync);
+        var queue = _hive.CreateQueueFor<long, long>(TenfoldAsync);
 
         var tasks = Enumerable.Range(0, Sum_Up_To_Count + 1)
             .Select(value => queue.AddRequest(value).Task)
